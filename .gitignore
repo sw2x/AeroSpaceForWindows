@@ -4,31 +4,29 @@
 /*
 
 # Top level dirs
-!/.bundle
 !/.github
 !/Sources
-!/axDumps
 !/dev-docs
 !/docs
-!/grammar
 !/legal
-!/resources
 !/script
-!/xcode
 
 # Top level important files
-!/*.sh
 !/.editorconfig
 !/.gitattributes
 !/.gitignore
 !/CONTRIBUTING.md
-!/Gemfile
 !/Package.resolved
 !/Package.swift
 !/README.md
+!/README.ja.md
+!/.swift-version
+!/*.ps1
+!/LICENSE.txt
+!/Tests
 
-/xcode/.xcode-build
-
-# XCode User settings
-xcuserdata/
-xcshareddata/
+.build/
+.swiftpm/
+.tools/
+.release/
+.debug/

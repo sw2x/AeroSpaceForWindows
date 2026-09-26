@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 enum Json: Encodable, Equatable { // todo rename to Dto? (data transfer object)

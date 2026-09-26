@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct MoveCommand: Command {
@@ -14,7 +14,7 @@ struct MoveCommand: Command {
         if await shouldFailBecauseFullscreen_nonCancellable(
             window: currentWindow,
             failIfFullscreen: args.failIfFullscreen,
-            failIfMacosNativeFullscreen: args.failIfMacosNativeFullscreen,
+            failIfNativeFullscreen: args.failIfNativeFullscreen,
         ) {
             return .fail
         }
@@ -37,9 +37,9 @@ struct MoveCommand: Command {
                 }
             case .floatingWindowsContainer: // floating window
                 return .fail(io.err("moving floating windows isn't yet supported")) // todo
-            case .macosMinimizedWindowsContainer, .macosFullscreenWindowsContainer, .macosHiddenAppsWindowsContainer:
-                return .fail(io.err(moveOutMacosUnconventionalWindow))
-            case .macosPopupWindowsContainer:
+            case .nativeMinimizedWindowsContainer, .nativeFullscreenWindowsContainer, .nativeHiddenWindowsContainer:
+                return .fail(io.err(moveOutNativeUnconventionalWindow))
+            case .nativePopupWindowsContainer:
                 return .fail(io.err(bugPrompt())) // Impossible
         }
     }
@@ -94,7 +94,7 @@ struct MoveCommand: Command {
     }
 }
 
-private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimized windows and windows of hidden apps isn't yet supported. This behavior is subject to change"
+private let moveOutNativeUnconventionalWindow = "moving native fullscreen, minimized windows and windows of hidden apps isn't yet supported. This behavior is subject to change"
 
 @MainActor private func moveOut(
     tilingWindow window: Window,
@@ -110,10 +110,10 @@ private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimiz
             case nil, .workspace: true
             // Impossible: tilingContainer's parent can only be a workspace or tilingContainer
             case .floatingWindowsContainer,
-                 .macosMinimizedWindowsContainer,
-                 .macosFullscreenWindowsContainer,
-                 .macosHiddenAppsWindowsContainer,
-                 .macosPopupWindowsContainer: true
+                 .nativeMinimizedWindowsContainer,
+                 .nativeFullscreenWindowsContainer,
+                 .nativeHiddenWindowsContainer,
+                 .nativePopupWindowsContainer: true
         }
     }) as? TilingContainer
     guard let innerMostTilingContainer else { return .fail(io.err(bugPrompt())) } // Impossible
@@ -174,13 +174,13 @@ extension TilingTreeNodeCases {
 func shouldFailBecauseFullscreen_nonCancellable(
     window: Window,
     failIfFullscreen: Bool,
-    failIfMacosNativeFullscreen: Bool,
+    failIfNativeFullscreen: Bool,
 ) async -> Bool {
     if failIfFullscreen && window.isFullscreen {
         return true
     }
-    if failIfMacosNativeFullscreen {
-        if true == (try? await window.isMacosFullscreen(.nonCancellable)) {
+    if failIfNativeFullscreen {
+        if true == (try? await window.isNativeFullscreen(.nonCancellable)) {
             return true
         }
     }

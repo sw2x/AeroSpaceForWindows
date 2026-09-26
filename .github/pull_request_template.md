@@ -1,10 +1,11 @@
-## PR checklist
+## Changes
 
-- [ ] Explain your changes in the relevant commit messages rather than in the PR description. The PR description must not contain more information than the commit messages (except for images and other media).
-- [ ] Each commit must explain what/why/how and motivation in its description. https://cbea.ms/git-commit/
-- [ ] Don't forget to link the appropriate issues/discussions in commit messages (if applicable).
-- [ ] Each commit must be an atomic change (a PR may contain several commits). Don't introduce new functional changes together with refactorings in the same commit.
-- [ ] `./test.sh` exits with non-zero exit code.
-- [ ] Avoid merge commits, always rebase and force push.
+Describe what changed and why. Link relevant Windows issues if applicable.
 
-Failure to follow the checklist with no apparent reasons will result in silent PR rejection.
+## Verification
+
+- [ ] `./build.ps1 -Test` succeeds.
+- [ ] Configuration and command help are updated where behavior changed.
+- [ ] Runtime dependencies and copyright notices are preserved.
+
+Describe any additional application or monitor checks and remaining limitations.

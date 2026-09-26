@@ -12,7 +12,7 @@ public struct ServerEvent: Codable, Sendable {
     // periphery:ignore - false positive unused warning. The var properties are serialized to JSON
     private var monitorId: Int? // 1-based
     // periphery:ignore - false positive unused warning. The var properties are serialized to JSON
-    private var appBundleId: String?
+    private var appId: String?
     // periphery:ignore - false positive unused warning. The var properties are serialized to JSON
     private var appName: String?
     // periphery:ignore - false positive unused warning. The var properties are serialized to JSON
@@ -38,8 +38,8 @@ public struct ServerEvent: Codable, Sendable {
         ServerEvent(_event: .modeChanged, mode: mode)
     }
 
-    public static func windowDetected(windowId: UInt32, workspace: String?, appBundleId: String?, appName: String?) -> ServerEvent {
-        ServerEvent(_event: .windowDetected, windowId: windowId, workspace: workspace, appBundleId: appBundleId, appName: appName)
+    public static func windowDetected(windowId: UInt32, workspace: String?, appId: String?, appName: String?) -> ServerEvent {
+        ServerEvent(_event: .windowDetected, windowId: windowId, workspace: workspace, appId: appId, appName: appName)
     }
 
     public static func bindingTriggered(mode: String, binding: String) -> ServerEvent {

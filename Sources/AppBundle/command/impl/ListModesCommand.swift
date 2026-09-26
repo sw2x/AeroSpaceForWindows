@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct ListModesCommand: Command {

@@ -7,5 +7,4 @@
 :source-highlighter: pygments
 :toc: left
 :env-site:
-:favicon: ./assets/icon.png
 :docinfo: shared-footer

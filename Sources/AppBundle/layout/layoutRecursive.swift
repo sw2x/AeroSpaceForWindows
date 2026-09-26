@@ -1,14 +1,11 @@
-import AppKit
+import Foundation
 
 extension Workspace {
     @MainActor
     func layoutWorkspace() async throws {
         if isEffectivelyEmpty { return }
         let rect = workspaceMonitor.visibleRectPaddedByOuterGaps
-        // If monitors are aligned vertically and the monitor below has smaller width, then macOS may not allow the
-        // window on the upper monitor to take full width. rect.height - 1 resolves this problem
-        // But I also faced this problem in monitors horizontal configuration. ¯\_(ツ)_/¯
-        try await layoutRecursive(rect.topLeftCorner, width: rect.width, height: rect.height - 1, virtual: rect, LayoutContext(self))
+        try await layoutRecursive(rect.topLeftCorner, width: rect.width, height: rect.height, virtual: rect, LayoutContext(self))
     }
 }
 
@@ -37,7 +34,7 @@ extension TreeNode {
                     } else {
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
-                        window.setAxFrame(point, CGSize(width: width, height: height))
+                        window.setNativeFrame(point, CGSize(width: width, height: height))
                     }
                 }
             case .tilingContainer(let container):
@@ -49,8 +46,8 @@ extension TreeNode {
                     case .accordion:
                         try await container.layoutAccordion(point, width: width, height: height, virtual: virtual, context)
                 }
-            case .macosMinimizedWindowsContainer, .macosFullscreenWindowsContainer,
-                 .macosPopupWindowsContainer, .macosHiddenAppsWindowsContainer:
+            case .nativeMinimizedWindowsContainer, .nativeFullscreenWindowsContainer,
+                 .nativePopupWindowsContainer, .nativeHiddenWindowsContainer:
                 return // Nothing to do for weirdos
         }
     }
@@ -71,7 +68,7 @@ extension Window {
     @MainActor
     fileprivate func layoutFloatingWindow(_ context: LayoutContext) async throws {
         let workspace = context.workspace
-        let windowRect = try await getAxRect(.cancellable) // Probably not idempotent
+        let windowRect = try await getNativeRect(.cancellable) // Probably not idempotent
         let currentMonitor = windowRect?.center.monitorApproximation
         if let currentMonitor, let windowRect, workspace != currentMonitor.activeWorkspace {
             let windowTopLeftCorner = windowRect.topLeftCorner
@@ -87,7 +84,7 @@ extension Window {
             newX = newX.coerce(in: workspaceRect.minX ... max(workspaceRect.minX, workspaceRect.maxX - windowWidth))
             newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
 
-            setAxFrame(CGPoint(x: newX, y: newY), nil)
+            setNativeFrame(CGPoint(x: newX, y: newY), nil)
         }
         if isFullscreen {
             layoutFullscreen(context)
@@ -100,7 +97,7 @@ extension Window {
         let monitorRect = noOuterGapsInFullscreen
             ? context.workspace.workspaceMonitor.visibleRect
             : context.workspace.workspaceMonitor.visibleRectPaddedByOuterGaps
-        setAxFrame(monitorRect.topLeftCorner, CGSize(width: monitorRect.width, height: monitorRect.height))
+        setNativeFrame(monitorRect.topLeftCorner, CGSize(width: monitorRect.width, height: monitorRect.height))
     }
 }
 

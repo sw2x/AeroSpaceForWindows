@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct FocusCommand: Command {
@@ -10,7 +10,7 @@ struct FocusCommand: Command {
         if let window = target.windowOrNil, await shouldFailBecauseFullscreen_nonCancellable(
             window: window,
             failIfFullscreen: args.failIfFullscreen,
-            failIfMacosNativeFullscreen: args.failIfMacosNativeFullscreen,
+            failIfNativeFullscreen: args.failIfNativeFullscreen,
         ) {
             return .fail
         }
@@ -207,8 +207,8 @@ extension TreeNode {
                 } else {
                     return mostRecentChild?.findLeafWindowRecursive(snappedTo: direction)
                 }
-            case .macosMinimizedWindowsContainer, .macosFullscreenWindowsContainer,
-                 .macosPopupWindowsContainer, .macosHiddenAppsWindowsContainer,
+            case .nativeMinimizedWindowsContainer, .nativeFullscreenWindowsContainer,
+                 .nativePopupWindowsContainer, .nativeHiddenWindowsContainer,
                  .floatingWindowsContainer:
                 die("Impossible")
         }

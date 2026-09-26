@@ -1,24 +1,6 @@
 {
-  "originHash" : "6466a3de6b03a7f9499cc6ad528be037cd42ee688a16c00bd96a3fa208099b1e",
+  "originHash" : "4ebb63e7eed00915f4e35a30e1f33066b080d9d0dc6bdbd7da56b390ee511a7a",
   "pins" : [
-    {
-      "identity" : "hotkey",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/soffes/HotKey",
-      "state" : {
-        "revision" : "a3cf605d7a96f6ff50e04fcb6dea6e2613cfcbe4",
-        "version" : "0.2.1"
-      }
-    },
-    {
-      "identity" : "issoundadditions",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/InerziaSoft/ISSoundAdditions",
-      "state" : {
-        "revision" : "4b555f0354e6c280917bae8a598a258efe87ab98",
-        "version" : "2.0.1"
-      }
-    },
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",

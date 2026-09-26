@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct ModeCommand: Command {
@@ -6,7 +6,6 @@ struct ModeCommand: Command {
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
     func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
-        await activateMode_nonCancellable(args.targetMode.val)
-        return .succ
+        return await activateMode_nonCancellable(args.targetMode.val) ? .succ : .fail(io.err("Unable to activate mode: missing mode or hotkey conflict"))
     }
 }

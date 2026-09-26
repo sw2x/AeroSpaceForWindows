@@ -1,7 +1,7 @@
 @testable import AppBundle
 import Common
 import Foundation
-import HotKey
+
 import XCTest
 
 let projectRoot: URL = {
@@ -15,6 +15,7 @@ let projectRoot: URL = {
 
 @MainActor
 func setUpWorkspacesForTests() {
+    isUnitTest = true
     config = defaultConfig
     configUrl = defaultConfigUrl
     config.enableNormalizationFlattenContainers = false // Make layout tests more predictable
@@ -84,7 +85,7 @@ extension MoveNodeToWorkspaceCmdArgs {
 }
 
 extension HotkeyBinding {
-    init(_ modifiers: NSEvent.ModifierFlags, _ keyCode: Key, _ commands: Shell<any Command>) {
+    init(_ modifiers: KeyModifiers, _ keyCode: Key, _ commands: Shell<any Command>) {
         let descriptionWithKeyNotation = modifiers.isEmpty
             ? keyCode.toString()
             : modifiers.toString() + "-" + keyCode.toString()

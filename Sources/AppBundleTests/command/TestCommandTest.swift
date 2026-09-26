@@ -6,29 +6,29 @@ import XCTest
 final class TestCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         testParseSingleCommandSucc(
-            "test %{app-bundle-id} = foo",
+            "test %{app-id} = foo",
             TestCmdArgs(rawArgs: [])
-                .copy(\.lhs, .initialized(.app(.appBundleId)))
+                .copy(\.lhs, .initialized(.app(.appId)))
                 .copy(\.infixOperator, .initialized(.equals))
                 .copy(\.rhs, .initialized("foo")),
         )
         testParseSingleCommandSucc(
-            "test-not %{app-bundle-id} ~= foo",
+            "test-not %{app-id} ~= foo",
             TestNotCmdArgs(rawArgs: [])
-                .copy(\.testArgs.lhs, .initialized(.app(.appBundleId)))
+                .copy(\.testArgs.lhs, .initialized(.app(.appId)))
                 .copy(\.testArgs.infixOperator, .initialized(.matchesRegex))
                 .copy(\.testArgs.rhs, .initialized("foo")),
         )
 
-        testParseCommandFail("test %{foo} = foo", msg: "ERROR: Can\'t parse \'foo\'.\n       Possible values: (window-id|window-is-fullscreen|window-title|window-layout|window-parent-container-layout|workspace|workspace-is-focused|workspace-is-visible|workspace-root-container-layout|app-bundle-id|app-name|app-pid|app-exec-path|app-bundle-path|monitor-id|monitor-appkit-nsscreen-screens-id|monitor-name|monitor-is-main)", exitCode: 2)
+        testParseCommandFail("test %{foo} = foo", msg: "ERROR: Can\'t parse \'foo\'.\n       Possible values: (window-id|window-is-fullscreen|window-title|window-layout|window-parent-container-layout|workspace|workspace-is-focused|workspace-is-visible|workspace-root-container-layout|app-id|app-name|app-pid|app-exec-path|app-executable-directory|monitor-id|monitor-native-index|monitor-name|monitor-is-main)", exitCode: 2)
         testParseCommandFail("test foo = foo", msg: "ERROR: Left hand side must be a single interpolation variable", exitCode: 2)
-        testParseCommandFail("test foo%{app-bundle-id} = foo", msg: "ERROR: Left hand side must be a single interpolation variable", exitCode: 2)
+        testParseCommandFail("test foo%{app-id} = foo", msg: "ERROR: Left hand side must be a single interpolation variable", exitCode: 2)
         testParseCommandFail("test", msg: "ERROR: Argument \'<lhs>\' is mandatory\nERROR: Argument \'<operator>\' is mandatory\nERROR: Argument \'<rhs>\' is mandatory", exitCode: 2)
-        testParseCommandFail("test foo = %{app-bundle-id}", msg: "ERROR: Left hand side must be a single interpolation variable\nERROR: Right hand side doesn\'t allow interpolation variables", exitCode: 2)
-        testParseCommandFail("test %{app-bundle-id} = %{app-bundle-id}", msg: "ERROR: Right hand side doesn\'t allow interpolation variables", exitCode: 2)
-        testParseCommandFail("test %{newline} = foo", msg: "ERROR: Can\'t parse \'newline\'.\n       Possible values: (window-id|window-is-fullscreen|window-title|window-layout|window-parent-container-layout|workspace|workspace-is-focused|workspace-is-visible|workspace-root-container-layout|app-bundle-id|app-name|app-pid|app-exec-path|app-bundle-path|monitor-id|monitor-appkit-nsscreen-screens-id|monitor-name|monitor-is-main)", exitCode: 2)
+        testParseCommandFail("test foo = %{app-id}", msg: "ERROR: Left hand side must be a single interpolation variable\nERROR: Right hand side doesn\'t allow interpolation variables", exitCode: 2)
+        testParseCommandFail("test %{app-id} = %{app-id}", msg: "ERROR: Right hand side doesn\'t allow interpolation variables", exitCode: 2)
+        testParseCommandFail("test %{newline} = foo", msg: "ERROR: Can\'t parse \'newline\'.\n       Possible values: (window-id|window-is-fullscreen|window-title|window-layout|window-parent-container-layout|workspace|workspace-is-focused|workspace-is-visible|workspace-root-container-layout|app-id|app-name|app-pid|app-exec-path|app-executable-directory|monitor-id|monitor-native-index|monitor-name|monitor-is-main)", exitCode: 2)
         testParseCommandFail("test %{window-id} = %{invalid}", msg: "ERROR: Right hand side doesn\'t allow interpolation variables", exitCode: 2)
     }
 
@@ -122,12 +122,12 @@ final class TestCommandTest: XCTestCase {
         }
 
         assertEquals(
-            await parseCommand("test %{app-bundle-id} = bobko.AeroSpace.test-app").cmdOrDie.run(.defaultEnv, .emptyStdin),
+            await parseCommand("test %{app-id} = bobko.AeroSpace.test-app").cmdOrDie.run(.defaultEnv, .emptyStdin),
             CmdResult(stdout: [], stderr: [], exitCode: Int32ExitCode(rawValue: 0)),
         )
 
         assertEquals(
-            await parseCommand("test %{app-bundle-id} = other.bundle.id").cmdOrDie.run(.defaultEnv, .emptyStdin),
+            await parseCommand("test %{app-id} = other.bundle.id").cmdOrDie.run(.defaultEnv, .emptyStdin),
             CmdResult(stdout: [], stderr: [], exitCode: Int32ExitCode(rawValue: 1)),
         )
     }
@@ -138,12 +138,12 @@ final class TestCommandTest: XCTestCase {
         }
 
         assertEquals(
-            await parseCommand("test %{app-bundle-id} ~= AERO").cmdOrDie.run(.defaultEnv, .emptyStdin),
+            await parseCommand("test %{app-id} ~= AERO").cmdOrDie.run(.defaultEnv, .emptyStdin),
             CmdResult(stdout: [], stderr: [], exitCode: Int32ExitCode(rawValue: 0)),
         )
 
         assertEquals(
-            await parseCommand("test %{app-bundle-id} ~= zzzzz").cmdOrDie.run(.defaultEnv, .emptyStdin),
+            await parseCommand("test %{app-id} ~= zzzzz").cmdOrDie.run(.defaultEnv, .emptyStdin),
             CmdResult(stdout: [], stderr: [], exitCode: Int32ExitCode(rawValue: 1)),
         )
     }
@@ -153,7 +153,7 @@ final class TestCommandTest: XCTestCase {
             assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
         }
 
-        let result = await parseCommand("test %{app-bundle-id} ~= [").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let result = await parseCommand("test %{app-id} ~= [").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(result.exitCode.rawValue, 2)
         assertEquals(result.stdout, [])
         assertTrue(result.stderr.first?.contains("Can\'t parse \'[\' regex") ?? false)

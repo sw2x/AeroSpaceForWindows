@@ -9,7 +9,7 @@ final class WorkspaceCommandTest: XCTestCase {
         _prevFocusedWorkspaceName = nil
     }
 
-    func testParseWorkspaceCommand() {
+    func testParseWorkspaceCommand() async {
         testParseCommandFail("workspace my mail", msg: "ERROR: Unknown argument 'mail'", exitCode: 2)
         testParseCommandFail("workspace 'my mail'", msg: "ERROR: Whitespace characters are forbidden in workspace names", exitCode: 2)
         assertEquals(parseCommand("workspace").errorOrNil, "ERROR: Argument '(<workspace-name>|next|prev)' is mandatory")
@@ -23,7 +23,7 @@ final class WorkspaceCommandTest: XCTestCase {
         testParseSingleCommandSucc("workspace --no-stdin next", WorkspaceCmdArgs(target: .relative(.next)).copy(\.commonState.explicitStdinFlag, false))
     }
 
-    func testParseDashDash() {
+    func testParseDashDash() async {
         testParseSingleCommandSucc("workspace -- foo", WorkspaceCmdArgs(target: .direct(.parse("foo").getOrDie())))
         assertEquals(parseCommand("workspace -- next").errorOrNil, "ERROR: 'next' is a reserved workspace name")
         assertEquals(parseCommand("workspace --").errorOrNil, "ERROR: Argument \'(<workspace-name>|next|prev)\' is mandatory")

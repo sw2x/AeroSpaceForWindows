@@ -1,6 +1,6 @@
-import AppKit
+import Foundation
 import Common
-import HotKey
+
 import TOMLDecoder
 import OrderedCollections
 
@@ -142,9 +142,7 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "default-root-container-layout": Parser(\.defaultRootContainerLayout, parseLayout),
     "default-root-container-orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
 
-    "start-at-login": Parser(\.startAtLogin, parseBool),
     "auto-reload-config": Parser(\.autoReloadConfig, parseBool),
-    "automatically-unhide-macos-hidden-apps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
     "accordion-padding": Parser(\.accordionPadding, parseInt),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
     "exec-on-workspace-change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
@@ -154,7 +152,6 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     modeConfigRootKey: Parser(\.modes, skipParsing(Config().modes)), // Parsed manually
 
     "gaps": Parser(\.gaps, parseGaps),
-    "focus-follows-mouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 

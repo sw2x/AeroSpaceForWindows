@@ -1,34 +1,18 @@
 import Common
 import Foundation
 
-let configDotfileName = ".aerospace.toml"
 func findCustomConfigUrl() -> ConfigFile {
-    let xdgConfigHome = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].map { URL(filePath: $0) }
-        ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: ".config/")
-    let candidates: [URL] = switch serverArgs.configLocation {
-        case let configLocation?: [URL(filePath: configLocation)]
-        case nil:
-            [
-                FileManager.default.homeDirectoryForCurrentUser.appending(path: configDotfileName),
-                xdgConfigHome.appending(path: "aerospace").appending(path: "aerospace.toml"),
-            ]
-    }
-    let existingCandidates: [URL] = candidates.filter { (candidate: URL) in FileManager.default.fileExists(atPath: candidate.path) }
-    let count = existingCandidates.count
-    return switch count {
-        case 0: .noCustomConfigExists
-        case 1: .file(existingCandidates.first.orDie())
-        default: .ambiguousConfigError(existingCandidates)
-    }
+    if let path = serverArgs.configLocation { return .file(URL(filePath: path)) }
+    let environment = ProcessInfo.processInfo.environment
+    let homeDirectory = (environment["HOME"] ?? environment["USERPROFILE"]).map { URL(filePath: $0) }
+        ?? FileManager.default.homeDirectoryForCurrentUser
+    let home = homeDirectory.appending(path: ".aerospace.toml")
+    let roaming = ProcessInfo.processInfo.environment["APPDATA"].map { URL(filePath: $0).appending(path: "AeroSpace/aerospace.toml") }
+    if FileManager.default.fileExists(atPath: home.path) { return .file(home) }
+    if let roaming, FileManager.default.fileExists(atPath: roaming.path) { return .file(roaming) }
+    return .noCustomConfigExists
 }
-
 enum ConfigFile {
-    case file(URL), ambiguousConfigError(_ candidates: [URL]), noCustomConfigExists
-
-    var urlOrNil: URL? {
-        return switch self {
-            case .file(let url): url
-            case .ambiguousConfigError, .noCustomConfigExists: nil
-        }
-    }
+    case file(URL), ambiguousConfigError([URL]), noCustomConfigExists
+    var urlOrNil: URL? { if case .file(let url) = self { return url }; return nil }
 }

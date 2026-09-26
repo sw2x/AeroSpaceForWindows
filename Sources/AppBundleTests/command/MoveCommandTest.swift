@@ -6,9 +6,9 @@ import XCTest
 final class MoveCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         assertNil(parseCommand("move --fail-if-fullscreen left").errorOrNil)
-        assertNil(parseCommand("move --fail-if-macos-native-fullscreen --window-id 1 right").errorOrNil)
+        assertNil(parseCommand("move --fail-if-native-fullscreen --window-id 1 right").errorOrNil)
     }
 
     func testFailIfFullscreen() async {
@@ -28,11 +28,11 @@ final class MoveCommandTest: XCTestCase {
         let root = Workspace.get(byName: name).rootTilingContainer.apply {
             let window = TestWindow.new(id: 1, parent: $0)
             assertEquals(window.focusWindow(), true)
-            window.isMacosFullscreenForTest = true
+            window.isNativeFullscreenForTest = true
             TestWindow.new(id: 2, parent: $0)
         }
 
-        let result = await parseCommand("move --fail-if-macos-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let result = await parseCommand("move --fail-if-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(result.exitCode.rawValue, 2)
         assertEquals(root.layoutDescription, .h_tiles([.window(1), .window(2)]))
     }
@@ -43,7 +43,7 @@ final class MoveCommandTest: XCTestCase {
             TestWindow.new(id: 2, parent: $0)
         }
 
-        let result = await parseCommand("move --fail-if-fullscreen --fail-if-macos-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let result = await parseCommand("move --fail-if-fullscreen --fail-if-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(result.exitCode.rawValue, 0)
         assertEquals(root.layoutDescription, .h_tiles([.window(2), .window(1)]))
     }
@@ -328,10 +328,10 @@ extension TreeNode {
             case .window(let window): .window(window.windowId)
             case .workspace(let workspace): .workspace(workspace.children.map(\.layoutDescription))
             case .floatingWindowsContainer(let container): .floatingWindowsContainer(container.children.map(\.layoutDescription))
-            case .macosMinimizedWindowsContainer: .macosMinimized
-            case .macosFullscreenWindowsContainer: .macosFullscreen
-            case .macosHiddenAppsWindowsContainer: .macosHiddeAppWindow
-            case .macosPopupWindowsContainer: .macosPopupWindowsContainer
+            case .nativeMinimizedWindowsContainer: .nativeMinimized
+            case .nativeFullscreenWindowsContainer: .nativeFullscreen
+            case .nativeHiddenWindowsContainer: .nativeHiddenAppWindow
+            case .nativePopupWindowsContainer: .nativePopupWindowsContainer
             case .tilingContainer(let container):
                 switch container.layout {
                     case .tiles:
@@ -355,8 +355,8 @@ enum LayoutDescription: Equatable {
     case v_accordion([LayoutDescription])
     case floatingWindowsContainer([LayoutDescription])
     case window(UInt32)
-    case macosPopupWindowsContainer
-    case macosMinimized
-    case macosHiddeAppWindow
-    case macosFullscreen
+    case nativePopupWindowsContainer
+    case nativeMinimized
+    case nativeHiddenAppWindow
+    case nativeFullscreen
 }

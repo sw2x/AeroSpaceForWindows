@@ -1,210 +1,154 @@
-import AppKit
+import Foundation
 import Common
+import NativeWindows
 
-@MainActor
-private var activeRefreshTask: Task<(), any Error>? = nil
+@MainActor private var refreshTask: Task<Void, Never>?
+@MainActor private var refreshInProgress = false
+@MainActor private var pendingRefresh = false
+@MainActor private var sessionBusy = false
+@MainActor private var sessionWaiters: [CheckedContinuation<Void, Never>] = []
+@MainActor private func acquireSession() async {
+    if !sessionBusy { sessionBusy = true; return }
+    await withCheckedContinuation { sessionWaiters.append($0) }
+}
+@MainActor private func releaseSession() {
+    if sessionWaiters.isEmpty { sessionBusy = false }
+    else { sessionWaiters.removeFirst().resume() }
+}
+@MainActor var currentlyManipulatedWithMouseWindowId: UInt32?
 
-@MainActor
-func scheduleCancellableCompleteRefreshSession(
-    _ event: RefreshSessionEvent,
-    optimisticallyPreLayoutWorkspaces: Bool = false,
-) {
-    activeRefreshTask?.cancel()
-    activeRefreshTask = Task.startUnstructured { @MainActor in
-        try checkCancellation()
-        await runHeavyCompleteRefreshSession(
-            event,
-            assumeCancellable: true,
-            optimisticallyPreLayoutWorkspaces: optimisticallyPreLayoutWorkspaces,
-        )
+@MainActor final class NativeFocusIntent {
+    var requested = false
+    var isActive = true
+}
+
+@TaskLocal var nativeFocusIntent: NativeFocusIntent? = nil
+
+@MainActor func recordNativeFocusIntent(_ command: any Command, exitCode: Int32) {
+    guard exitCode == EXIT_CODE_ZERO, let intent = nativeFocusIntent, intent.isActive else { return }
+    switch command.info.kind {
+        case .focus, .focusBackAndForth, .focusMonitor, .workspace,
+             .workspaceBackAndForth, .summonWorkspace:
+            intent.requested = true
+        default: break
     }
 }
 
-@MainActor
-func runHeavyCompleteRefreshSession(
-    _ event: RefreshSessionEvent,
-    assumeCancellable: Bool,
-    layoutWorkspaces shouldLayoutWorkspaces: Bool = true,
-    optimisticallyPreLayoutWorkspaces: Bool = false,
-) async {
-    let state = signposter.beginInterval(#function, "event: \(event) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
-    defer { signposter.endInterval(#function, state) }
-    if !TrayMenuModel.shared.isEnabled { return }
-    let res = await Result {
+@MainActor func scheduleCancellableCompleteRefreshSession(_ event: RefreshSessionEvent, optimisticallyPreLayoutWorkspaces: Bool = false) {
+    if refreshTask != nil { pendingRefresh = true; return }
+    refreshTask = Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(150))
+        repeat {
+            pendingRefresh = false
+            await runHeavyCompleteRefreshSession(event, assumeCancellable: false)
+        } while pendingRefresh
+        refreshTask = nil
+    }
+}
+
+@MainActor func runHeavyCompleteRefreshSession(_ event: RefreshSessionEvent, assumeCancellable: Bool,
+    layoutWorkspaces shouldLayout: Bool = true, optimisticallyPreLayoutWorkspaces: Bool = false) async {
+    guard !refreshInProgress else { return }
+    refreshInProgress = true
+    defer { refreshInProgress = false }
+    await acquireSession()
+    defer { releaseSession() }
+    do {
         try await $refreshSessionEvent.withValue(event) {
-            let nativeFocused = try await getNativeFocusedWindow(.cancellable)
-            if let nativeFocused { try await debugWindowsIfRecording(nativeFocused, .cancellable) }
-            updateFocusCache(nativeFocused)
-
-            if shouldLayoutWorkspaces && optimisticallyPreLayoutWorkspaces { try await layoutWorkspaces() }
-
-            await refreshModel_nonCancellable()
-            try await refresh()
+            await discoverWindows()
             gcMonitors()
-
-            updateTrayText()
-            SecureInputPanel.shared.refresh()
             try await normalizeLayoutReason()
-            if shouldLayoutWorkspaces { try await layoutWorkspaces() }
+            updateFocusCache(try await getNativeFocusedWindow(.cancellable))
+            await refreshModel_nonCancellable()
+            if shouldLayout { try await layoutWorkspaces() }
+            updateTrayText()
         }
-    }
-    switch res {
-        case .success(()): break
-        case .failure(let err as CancellationError): check(assumeCancellable, "Non cancellable refresh session was canceled: \(err) (\(type(of: err)))")
-        case .failure(let err): die("Illegal error: \(err)")
+    } catch {
+        aw_restore_all()
+        eprint("Window refresh failed: \(error)")
     }
 }
 
-@MainActor
-func runLightSession<T>(
-    _ event: RefreshSessionEvent,
-    _: RunSessionGuard,
-    body: @MainActor () async throws -> T,
-) async throws -> T {
-    let state = signposter.beginInterval(#function, "event: \(event) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
-    defer { signposter.endInterval(#function, state) }
-    activeRefreshTask?.cancel() // Give priority to runSession
-    activeRefreshTask = nil
-    return try await $refreshSessionEvent.withValue(event) {
-        let nativeFocused = try await getNativeFocusedWindow(.cancellable)
-        if let nativeFocused { try await debugWindowsIfRecording(nativeFocused, .cancellable) }
-        updateFocusCache(nativeFocused)
-        let focusBefore = focus.windowOrNil
+@MainActor private func discoverWindows() async {
+    if isUnitTest { return }
+    var count: Int32 = 0
+    guard let native = aw_windows(&count) else { return }
+    defer { aw_free(native) }
+    let selected = (0..<Int(count)).filter { serverArgs.manageProcess == nil || native[$0].pid == serverArgs.manageProcess }
+    let handles = Set(selected.map { native[$0].handle })
+    for window in DesktopWindow.allWindows where !handles.contains(window.handle) {
+        window.garbageCollect(skipClosedWindowsCache: false)
+    }
+    for index in selected { _ = await DesktopWindow.register(native[index]) }
+    let pids = Set(DesktopWindow.allWindows.map { $0.app.pid })
+    DesktopApp.allAppsMap = DesktopApp.allAppsMap.filter { pids.contains($0.key) }
+}
 
-        await refreshModel_nonCancellable()
-        let result = try await body()
-        await refreshModel_nonCancellable()
-
-        let focusAfter = focus.windowOrNil
-
-        updateTrayText()
-        SecureInputPanel.shared.refresh()
-        if !event.isFocusFollowsMouse { try await layoutWorkspaces() }
-        if focusBefore != focusAfter {
-            focusAfter?.nativeFocus() // syncFocusToMacOs
+@MainActor func runLightSession<T>(_ event: RefreshSessionEvent, _: RunSessionGuard,
+    body: @MainActor () async throws -> T) async throws -> T {
+    await acquireSession()
+    defer { releaseSession() }
+    let intent = NativeFocusIntent()
+    // Child tasks inherit task-local values. Seal this object when the session
+    // ends so a later debounced refresh cannot affect a completed request.
+    defer { intent.isActive = false }
+    return try await $nativeFocusIntent.withValue(intent) {
+        try await $refreshSessionEvent.withValue(event) {
+            let previous = focus
+            do {
+                let result = try await body()
+                await refreshModel_nonCancellable()
+                try await layoutWorkspaces()
+                if !serverArgs.isReadOnly, TrayMenuModel.shared.isEnabled,
+                   intent.requested || previous != focus,
+                   let window = focus.windowOrNil, !window.requestNativeFocus() {
+                    throw PlatformError("Windows denied foreground activation of window \(window.windowId)")
+                }
+                updateTrayText()
+                return result
+            } catch {
+                _ = setFocus(to: previous)
+                try? await layoutWorkspaces()
+                throw error
+            }
         }
-        if !event.isFocusFollowsMouse { scheduleCancellableCompleteRefreshSession(event) }
-        return result
+    }
+}
+
+@MainActor func refreshModel_nonCancellable() async {
+    Workspace.garbageCollectUnusedWorkspaces()
+    for workspace in Workspace.all { workspace.normalizeContainers() }
+    await checkOnFocusChangedCallbacks_nonCancellable()
+}
+
+@MainActor func layoutWorkspaces() async throws {
+    if isUnitTest { return }
+    if !TrayMenuModel.shared.isEnabled || serverArgs.isReadOnly { aw_restore_all(); return }
+    for monitor in monitorInfos {
+        let workspace = monitor.activeWorkspace
+        for window in workspace.allLeafWindowsRecursive { try (window as? DesktopWindow)?.setWorkspaceVisible(true) }
+        try await workspace.layoutWorkspace()
+    }
+    for workspace in Workspace.all where !workspace.isVisible {
+        for window in workspace.allLeafWindowsRecursive { try (window as? DesktopWindow)?.setWorkspaceVisible(false) }
     }
 }
 
 struct RunSessionGuard: Sendable {
-    @MainActor
-    static var isServerEnabled: RunSessionGuard? { TrayMenuModel.shared.isEnabled ? forceRun : nil }
-    @MainActor
-    static func isServerEnabled(orIsEnableCommand command: (any Command)?) -> RunSessionGuard? {
-        command is EnableCommand ? .forceRun : .isServerEnabled
-    }
-    @MainActor
-    static func checkServerIsEnabledOrDie(
-        file: StaticString = #fileID,
-        line: Int = #line,
-        column: Int = #column,
-        function: String = #function,
-    ) -> RunSessionGuard {
-        .isServerEnabled ?? dieT("server is disabled", file: file, line: line, column: column, function: function)
-    }
     static let forceRun = RunSessionGuard()
-    private init() {}
-}
-
-@MainActor
-func refreshModel_nonCancellable() async {
-    if refreshSessionEvent?.isFocusFollowsMouse == true {
-        await checkOnFocusChangedCallbacks_nonCancellable()
-    } else {
-        Workspace.garbageCollectUnusedWorkspaces()
-        await checkOnFocusChangedCallbacks_nonCancellable()
-        normalizeContainers()
-    }
-}
-
-@MainActor
-private func refresh() async throws {
-    // Garbage collect terminated apps and windows before working with all windows
-    let mapping = try await MacApp.refreshAllAndGetAliveWindowIds(frontmostAppBundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
-    let aliveWindowIds = mapping.values.flatMap(id).toSet()
-
-    for window in MacWindow.allWindows {
-        if !aliveWindowIds.contains(window.windowId) {
-            window.garbageCollect(skipClosedWindowsCache: false)
+    @MainActor static var isServerEnabled: RunSessionGuard? { TrayMenuModel.shared.isEnabled ? forceRun : nil }
+    @MainActor static func isServerEnabled(orIsEnableCommand command: (any Command)?) -> RunSessionGuard? {
+        guard let command else { return .isServerEnabled }
+        switch command.info.kind {
+            case .config, .echo, .listApps, .listExecEnvVars, .listModes, .listMonitors,
+                 .listWindows, .listWorkspaces, .test, .testNot, ._true, ._false, .reloadConfig:
+                return .forceRun
+            case .enable: return serverArgs.isReadOnly ? nil : .forceRun
+            default: return .isServerEnabled
         }
     }
-    for (app, windowIds) in mapping {
-        for windowId in windowIds {
-            try await MacWindow.getOrRegister(windowId: windowId, macApp: app)
-        }
-    }
-
-    // Garbage collect workspaces after apps, because workspaces contain apps.
-    Workspace.garbageCollectUnusedWorkspaces()
-}
-
-func refreshObs(_: AXObserver, _: AXUIElement, notif: CFString, _: UnsafeMutableRawPointer?) {
-    let notif = notif as String
-    Task.startUnstructured { @MainActor in
-        if !TrayMenuModel.shared.isEnabled { return }
-        scheduleCancellableCompleteRefreshSession(.ax(notif))
-    }
-}
-
-enum OptimalHideCorner {
-    case bottomLeftCorner, bottomRightCorner
-}
-
-@MainActor
-private func layoutWorkspaces() async throws {
-    if !TrayMenuModel.shared.isEnabled {
-        for workspace in Workspace.all {
-            workspace.allLeafWindowsRecursive.forEach { ($0 as! MacWindow).unhideFromCorner() } // todo as!
-            try await workspace.layoutWorkspace() // Unhide tiling windows from corner
-        }
-        return
-    }
-    let monitors = monitorInfos
-    var monitorToOptimalHideCorner: [CGPoint: OptimalHideCorner] = [:]
-    for monitor in monitors {
-        let xOff = monitor.width * 0.1
-        let yOff = monitor.height * 0.1
-        // brc = bottomRightCorner
-        let brc1 = monitor.rect.bottomRightCorner + CGPoint(x: 2, y: -yOff)
-        let brc2 = monitor.rect.bottomRightCorner + CGPoint(x: -xOff, y: 2)
-        let brc3 = monitor.rect.bottomRightCorner + CGPoint(x: 2, y: 2)
-
-        // blc = bottomLeftCorner
-        let blc1 = monitor.rect.bottomLeftCorner + CGPoint(x: -2, y: -yOff)
-        let blc2 = monitor.rect.bottomLeftCorner + CGPoint(x: xOff, y: 2)
-        let blc3 = monitor.rect.bottomLeftCorner + CGPoint(x: -2, y: 2)
-
-        func contains(_ monitor: MonitorInfo, _ point: CGPoint) -> Int { monitor.rect.contains(point) ? 1 : 0 }
-        let important = 10
-
-        let corner: OptimalHideCorner =
-            monitors.sumOfInt { contains($0, blc1) + contains($0, blc2) + important * contains($0, blc3) } <
-            monitors.sumOfInt { contains($0, brc1) + contains($0, brc2) + important * contains($0, brc3) }
-            ? .bottomLeftCorner
-            : .bottomRightCorner
-        monitorToOptimalHideCorner[monitor.rect.topLeftCorner] = corner
-    }
-
-    // to reduce flicker, first unhide visible workspaces, then hide invisible ones
-    for monitor in monitors {
-        let workspace = monitor.activeWorkspace
-        workspace.allLeafWindowsRecursive.forEach { ($0 as! MacWindow).unhideFromCorner() } // todo as!
-        try await workspace.layoutWorkspace()
-    }
-    for workspace in Workspace.all where !workspace.isVisible {
-        let corner = monitorToOptimalHideCorner[workspace.workspaceMonitor.rect.topLeftCorner] ?? .bottomRightCorner
-        for window in workspace.allLeafWindowsRecursive {
-            try await (window as! MacWindow).hideInCorner(corner) // todo as!
-        }
-    }
-}
-
-@MainActor
-private func normalizeContainers() {
-    // Can't do it only for visible workspace because most of the commands support --window-id and --workspace flags
-    for workspace in Workspace.all {
-        workspace.normalizeContainers()
+    @MainActor static func checkServerIsEnabledOrDie(file: StaticString = #fileID, line: Int = #line,
+        column: Int = #column, function: String = #function) -> RunSessionGuard {
+        isServerEnabled ?? dieT("Server is disabled", file: file, line: line, column: column, function: function)
     }
 }

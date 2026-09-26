@@ -6,7 +6,7 @@ import XCTest
 final class ExecCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParseExecCommand() {
+    func testParseExecCommand() async {
         testParseSingleCommandSucc("exec-and-forget echo 'foo'", ExecAndForgetCmdArgs(bashScript: " echo 'foo'"))
     }
 }

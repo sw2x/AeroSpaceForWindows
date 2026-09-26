@@ -3,7 +3,7 @@ include::util/site-attributes.adoc[]
 
 include::util/header.adoc[]
 
-Commands documentation is also available as manpages.
+These command references describe the Windows port. Run `aerospace <command> --help` for built-in help. `exec-and-forget` is available in configuration only.
 
 == balance-sizes
 ----
@@ -32,13 +32,6 @@ include::aerospace-config.adoc[tags=synopsis]
 ----
 include::aerospace-config.adoc[tags=purpose]
 include::aerospace-config.adoc[tags=body]
-
-== debug-windows
-----
-include::aerospace-debug-windows.adoc[tags=synopsis]
-----
-include::aerospace-debug-windows.adoc[tags=purpose]
-include::aerospace-debug-windows.adoc[tags=body]
 
 == echo
 ----
@@ -167,20 +160,6 @@ include::aerospace-list-workspaces.adoc[tags=synopsis]
 include::aerospace-list-workspaces.adoc[tags=purpose]
 include::aerospace-list-workspaces.adoc[tags=body]
 
-== macos-native-fullscreen
-----
-include::aerospace-macos-native-fullscreen.adoc[tags=synopsis]
-----
-include::aerospace-macos-native-fullscreen.adoc[tags=purpose]
-include::aerospace-macos-native-fullscreen.adoc[tags=body]
-
-== macos-native-minimize
-----
-include::aerospace-macos-native-minimize.adoc[tags=synopsis]
-----
-include::aerospace-macos-native-minimize.adoc[tags=purpose]
-include::aerospace-macos-native-minimize.adoc[tags=body]
-
 == mode
 ----
 include::aerospace-mode.adoc[tags=synopsis]
@@ -195,13 +174,6 @@ include::aerospace-move.adoc[tags=synopsis]
 ----
 include::aerospace-move.adoc[tags=purpose]
 include::aerospace-move.adoc[tags=body]
-
-== move-mouse
-----
-include::./aerospace-move-mouse.adoc[tags=synopsis]
-----
-include::./aerospace-move-mouse.adoc[tags=purpose]
-include::./aerospace-move-mouse.adoc[tags=body]
 
 == move-node-to-monitor
 ----
@@ -252,13 +224,6 @@ include::aerospace-split.adoc[tags=synopsis]
 include::aerospace-split.adoc[tags=purpose]
 include::aerospace-split.adoc[tags=body]
 
-== subscribe
-----
-include::aerospace-subscribe.adoc[tags=synopsis]
-----
-include::aerospace-subscribe.adoc[tags=purpose]
-include::aerospace-subscribe.adoc[tags=body]
-
 == swap
 ----
 include::aerospace-swap.adoc[tags=synopsis]
@@ -301,13 +266,6 @@ include::aerospace-true.adoc[tags=synopsis]
 ----
 include::aerospace-true.adoc[tags=purpose]
 include::aerospace-true.adoc[tags=body]
-
-== volume
-----
-include::./aerospace-volume.adoc[tags=synopsis]
-----
-include::./aerospace-volume.adoc[tags=purpose]
-include::./aerospace-volume.adoc[tags=body]
 
 == workspace
 ----

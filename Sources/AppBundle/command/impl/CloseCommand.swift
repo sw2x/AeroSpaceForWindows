@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct CloseCommand: Command {
@@ -10,22 +10,8 @@ struct CloseCommand: Command {
         guard let window = target.windowOrNil else {
             return .fail(io.err("Empty workspace"))
         }
-        // Access ax directly. Not cool :(
-        if await args.quitIfLastWindow.andAsync({ @MainActor @Sendable in (try? await window.macAppUnsafe.getAxWindowsCount(.nonCancellable)) == 1 }) {
-            let app = window.macAppUnsafe
-            if app.nsApp.terminate() {
-                for workspace in Workspace.all {
-                    for window in workspace.allLeafWindowsRecursive where window.app.pid == app.pid {
-                        (window as! MacWindow).garbageCollect(skipClosedWindowsCache: true)
-                    }
-                }
-                return .succ
-            } else {
-                return .fail(io.err("Failed to quit '\(window.app.name ?? "Unknown app")'"))
-            }
-        } else {
-            window.closeAxWindow()
-            return .succ
-        }
+        if args.quitIfLastWindow { return .fail(io.err("--quit-if-last-window is not supported on Windows; use close without that flag")) }
+        window.closeNativeWindow()
+        return .succ
     }
 }

@@ -171,17 +171,17 @@ extension FormatVar {
             case (.monitor(let m), .monitor(let f)):
                 return switch f {
                     case .monitorId_oneBased: .success(m.monitorId_oneBased.map { .int($0) } ?? .string("NULL-MONITOR-ID"))
-                    case .monitorAppKitNsScreenScreensId: .success(.int(m.monitorAppKitNsScreenScreensId))
+                    case .nativeMonitorIndex: .success(.int(m.nativeMonitorIndex))
                     case .monitorName: .success(.string(m.name))
                     case .monitorIsMain: .success(.bool(m.isMain))
                 }
             case (.app(let a), .app(let f)):
                 return switch f {
-                    case .appBundleId: .success(.string(a.rawAppBundleId ?? "NULL-APP-BUNDLE-ID"))
+                    case .appId: .success(.string(a.rawAppId ?? "NULL-APP-BUNDLE-ID"))
                     case .appName: .success(.string(a.name ?? "NULL-APP-NAME"))
                     case .appPid: .success(.int(a.pid))
                     case .appExecPath: .success(.string(a.execPath ?? "NULL-APP-EXEC-PATH"))
-                    case .appBundlePath: .success(.string(a.bundlePath ?? "NULL-APP-BUNDLE-PATH"))
+                    case .appExecutableDirectory: .success(.string(a.executableDirectory ?? "NULL-APP-BUNDLE-PATH"))
                 }
             default: break
         }
@@ -248,10 +248,10 @@ private func toLayoutResult(w: Window) -> Result<Primitive, InterVarExpansionErr
     return switch getChildParentRelation(child: w, parent: parent) {
         case .tiling(let tc): .success(.string(toLayoutString(tc: tc)))
         case .floatingWindow: .success(.string(LayoutCmdArgs.LayoutDescription.floating.rawValue))
-        case .macosNativeFullscreenWindow: .success(.string("macos_native_fullscreen"))
-        case .macosNativeHiddenAppWindow: .success(.string("macos_native_window_of_hidden_app"))
-        case .macosNativeMinimizedWindow: .success(.string("macos_native_minimized"))
-        case .macosPopupWindow: .success(.string("NULL-WINDOW-LAYOUT"))
+        case .nativeFullscreenWindow: .success(.string("native_fullscreen"))
+        case .nativeHiddenWindow: .success(.string("native_window_of_hidden_app"))
+        case .nativeMinimizedWindow: .success(.string("native_minimized"))
+        case .nativePopupWindow: .success(.string("NULL-WINDOW-LAYOUT"))
 
         case .rootTilingContainer: .failure(.notPossible("Not possible"))
         case .shimContainerRelation: .failure(.windowParentIllegalRelation("Window cannot have a shim container relation"))

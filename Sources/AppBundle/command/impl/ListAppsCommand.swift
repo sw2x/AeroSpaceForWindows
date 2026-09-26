@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct ListAppsCommand: Command {
@@ -6,10 +6,7 @@ struct ListAppsCommand: Command {
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
     func run(_ env: CmdEnv, _ io: CmdIo) -> BinaryExitCode {
-        var result = Array(MacApp.allAppsMap.values)
-        if let hidden = args.macosHidden {
-            result = result.filter { $0.nsApp.isHidden == hidden }
-        }
+        let result = Array(DesktopApp.allAppsMap.values)
 
         lazy var list = result.map(AeroObj.app)
         return switch true {

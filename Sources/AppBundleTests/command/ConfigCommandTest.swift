@@ -1,13 +1,13 @@
 @testable import AppBundle
 import Common
-import HotKey
+
 import XCTest
 
 @MainActor
 final class ConfigCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         assertNil(parseCommand("config --major-keys").errorOrNil)
         assertNil(parseCommand("config --all-keys").errorOrNil)
         assertNil(parseCommand("config --config-path").errorOrNil)
@@ -195,7 +195,7 @@ final class ConfigCommandTest: XCTestCase {
 
     // The naturally-built configMap (buildConfigMap) never produces arrays, so the array branches
     // of ConfigMapValue.find/dumpAllKeysRecursive are exercised directly here.
-    func testFindArrayIndex_success() {
+    func testFindArrayIndex_success() async {
         let arr: ConfigMapValue = .array([.scalar(.string("a")), .scalar(.string("b"))])
         switch arr.find(keyPath: ["1"].slice) {
             case .success(.scalar(.string(let s))): assertEquals(s, "b")
@@ -203,17 +203,17 @@ final class ConfigCommandTest: XCTestCase {
         }
     }
 
-    func testFindArrayIndex_outOfBounds() {
+    func testFindArrayIndex_outOfBounds() async {
         let arr: ConfigMapValue = .array([.scalar(.string("a"))])
         assertFail(arr.find(keyPath: ["5"].slice), "Index out of bounds. Index: 5, Size: 1")
     }
 
-    func testFindArrayIndex_notInt() {
+    func testFindArrayIndex_notInt() async {
         let arr: ConfigMapValue = .array([.scalar(.string("a"))])
         assertFail(arr.find(keyPath: ["foo"].slice), "Can't convert key token 'foo' to Int")
     }
 
-    func testDumpAllKeys_array() {
+    func testDumpAllKeys_array() async {
         let value: ConfigMapValue = .array([.scalar(.string("a")), .map(["k": .scalar(.int(1))])])
         var result: [String] = []
         value.dumpAllKeysRecursive(path: ".", result: &result)

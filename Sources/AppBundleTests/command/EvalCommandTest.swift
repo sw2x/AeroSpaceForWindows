@@ -6,12 +6,12 @@ import XCTest
 final class EvalCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         testParseSingleCommandSucc("eval 'workspace foo'", EvalCmdArgs(rawArgs: []).copy(\.shellExpr, .initialized("workspace foo")))
         assertEquals(parseCommand("eval").errorOrNil, "ERROR: Argument '<aerospace-shell-expr>' is mandatory")
     }
 
-    func testParseDashDash() {
+    func testParseDashDash() async {
         testParseSingleCommandSucc(
             "eval -- '--anything'",
             EvalCmdArgs(rawArgs: []).copy(\.shellExpr, .initialized("--anything")),

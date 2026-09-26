@@ -6,7 +6,7 @@ import XCTest
 final class TrueCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         testParseSingleCommandSucc("true", TrueCmdArgs(rawArgs: []))
         testParseCommandFail("true foo", msg: "ERROR: Unknown argument \'foo\'", exitCode: 2)
 

@@ -1,7 +1,7 @@
 = aerospace(1)
 include::util/man-attributes.adoc[]
 :manname: aerospace
-:manpurpose: i3-like tiling window manager for macOS
+:manpurpose: i3-like tiling window manager for Windows 11 x64
 
 == Synopsis
 [verse]
@@ -9,11 +9,11 @@ aerospace [-h|--help] [-v|--version] <subcommand> [<subcommand-options>...] [<su
 
 == Description
 
-AeroSpace is an i3-like tiling window manager for macOS
+AeroSpace is an i3-like tiling window manager for Windows 11 x64
 
 *aerospace* command line program is used to manipulate AeroSpace and query its state.
 
-See https://nikitabobko.github.io/AeroSpace/commands for available <subcommand> options
+See xref:commands.adoc[command references] for available subcommands.
 
 See each <subcommand> individual man page for <subcommand-options> and <subcommand-arguments>
 

@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 enum FrozenTreeNode: Sendable {
@@ -19,10 +19,10 @@ struct FrozenContainer: Sendable {
                 case .tilingContainer(let c): .container(FrozenContainer(c))
                 case .workspace,
                      .floatingWindowsContainer,
-                     .macosMinimizedWindowsContainer,
-                     .macosHiddenAppsWindowsContainer,
-                     .macosFullscreenWindowsContainer,
-                     .macosPopupWindowsContainer:
+                     .nativeMinimizedWindowsContainer,
+                     .nativeHiddenWindowsContainer,
+                     .nativeFullscreenWindowsContainer,
+                     .nativePopupWindowsContainer:
                     illegalChildParentRelation(child: $0, parent: container)
             }
         }

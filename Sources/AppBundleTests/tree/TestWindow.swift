@@ -1,9 +1,9 @@
 @testable import AppBundle
-import AppKit
+import Foundation
 
 final class TestWindow: Window, CustomStringConvertible {
     private var _rect: Rect?
-    var isMacosFullscreenForTest = false
+    var isNativeFullscreenForTest = false
 
     @MainActor
     private init(_ id: UInt32, _ parent: NonLeafTreeNodeObject, _ adaptiveWeight: CGFloat, _ rect: Rect?) {
@@ -27,19 +27,25 @@ final class TestWindow: Window, CustomStringConvertible {
         TestApp.shared.focusedWindow = self
     }
 
-    override func closeAxWindow() {
+    override func closeNativeWindow() {
         unbindFromParent()
     }
 
     override func getTitle(_ cm: CancellationMode) async throws -> String { description }
 
-    @MainActor override func getAxRect(_ cm: CancellationMode) async throws -> Rect? { // todo change to not Optional
+    @MainActor override func getNativeRect(_ cm: CancellationMode) async throws -> Rect? { // todo change to not Optional
         _rect
     }
 
-    @MainActor override func getAxSize(_ cm: CancellationMode) async throws -> CGSize? {
+    @MainActor override func getNativeSize(_ cm: CancellationMode) async throws -> CGSize? {
         _rect.map { CGSize(width: $0.width, height: $0.height) }
     }
 
-    override func isMacosFullscreen(_ cm: CancellationMode) async throws -> Bool { isMacosFullscreenForTest }
+    override func setNativeFrame(_ topLeft: CGPoint?, _ size: CGSize?) {
+        let point = topLeft ?? _rect?.topLeftCorner ?? .zero
+        let dimensions = size ?? _rect?.size ?? .zero
+        _rect = Rect(topLeftX: point.x, topLeftY: point.y, width: dimensions.width, height: dimensions.height)
+    }
+
+    override func isNativeFullscreen(_ cm: CancellationMode) async throws -> Bool { isNativeFullscreenForTest }
 }

@@ -1,66 +1,38 @@
-name: build
-
+name: Windows build
 on:
   push:
-    branches:
-      - 'main'
-      - 'rr/**' # "rr" stands for "remote run"
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
-  schedule:
-    - cron: '0 0 * * *' # every day at 00:00
-
+    branches: [main]
+permissions:
+  contents: read
 jobs:
-
-  build-debug:
-    strategy:
-      # fail-fast: false # Disable fail-fast in matrix
-      matrix:
-        # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories
-        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md
-        # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md
-        # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
-        # https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md
-        #
-        # Xcode versions:
-        # - https://en.wikipedia.org/wiki/Xcode
-        # - https://xcodereleases.com/?scope=release
-        os: [macos-14, macos-15, macos-26, xcode-27]
-    name: build-debug
-    runs-on: ${{ matrix.os }}
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
     steps:
-      - run: env # Debug
       - uses: actions/checkout@v6
-      - run: ./.github/gh-actions-runner-xcode-select.sh
-      - run: brew update && brew install swiftly bash
-      - run: swiftly init --skip-install --assume-yes --verbose && swiftly install
-      - run: swiftly run swift --version
-      - run: ./build-debug.sh
-      - run: ./test.sh
-
-  # We build release artifacts only on the latest macOS versions because:
-  # 1. It cuts the build time twice on GH Actions
-  # 2. The latest Xcode version is not available on old macOS, and old Xcode versions bundle too old Swift version
-  build-release:
-    strategy:
-      # fail-fast: false # Disable fail-fast in matrix
-      matrix:
-        os: [macos-15, macos-26, xcode-27]
-    name: build-release
-    runs-on: ${{ matrix.os }}
-    steps:
-      - run: env # Debug
-      - uses: actions/checkout@v6
-      - run: ./.github/gh-actions-runner-xcode-select.sh
-      - run: brew update && brew install bash fish xcbeautify swiftly
-      - run: swiftly init --skip-install --assume-yes --verbose && swiftly install
-      - run: swiftly run swift --version
-      - name: './build-release.sh'
+      - name: Install Swift 6.4.0
+        shell: pwsh
         run: |
-          # "-" means "Sign to run locally". There is no aerospace-codesign-certificate on GH Actions
-          ./build-release.sh --codesign-identity -
-          brew trust nikitabobko/tap
-          ./install-from-sources.sh --dont-rebuild
-      - name: cat ./.release/xcodebuild.log
-        if: ${{ always() }}
-        run: 'if test -f ./.release/xcodebuild.log; then cat ./.release/xcodebuild.log; fi'
+          Invoke-WebRequest https://download.swift.org/swift-6.4.0-release/windows10/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE-windows10.exe -OutFile "$env:RUNNER_TEMP\swift.exe"
+          $install = Start-Process "$env:RUNNER_TEMP\swift.exe" -ArgumentList '/quiet', 'OptionsInstallAndroidPlatform=0', 'OptionsInstallIDE=0', 'OptionsInstallWindowsSDKARM64=0', 'OptionsInstallWindowsSDKX86=0', 'OptionsInstallWindowsRedistARM64=0', 'OptionsInstallWindowsRedistX86=0' -WindowStyle Hidden -Wait -PassThru
+          if ($install.ExitCode -notin @(0,3010)) { throw "Swift install failed: $($install.ExitCode)" }
+          $toolBin = Get-Item -LiteralPath "$env:LOCALAPPDATA\Programs\Swift\Toolchains\6.4.0+Asserts\usr\bin" -ErrorAction SilentlyContinue
+          if ($null -eq $toolBin) { throw 'Swift toolchain bin directory was not found' }
+          $toolBin.FullName | Out-File $env:GITHUB_PATH -Append
+          $swiftRoot = Split-Path (Split-Path (Split-Path (Split-Path $toolBin.FullName)))
+          $sdkRoot = Join-Path $swiftRoot 'Platforms\6.4.0\Windows.platform\Developer\SDKs\Windows.sdk'
+          if (!(Test-Path -LiteralPath $sdkRoot -PathType Container)) { throw 'Swift Windows SDK directory was not found' }
+          "SDKROOT=$sdkRoot" | Out-File $env:GITHUB_ENV -Append
+          "SWIFTSDKROOT=$sdkRoot" | Out-File $env:GITHUB_ENV -Append
+      - name: Build, Swift tests and native Windows smoke test
+        shell: pwsh
+        run: ./build.ps1 -Test
+      - name: Package
+        shell: pwsh
+        run: ./build-release.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AeroSpace-Windows-x64
+          path: .release/AeroSpace-Windows-x64.zip

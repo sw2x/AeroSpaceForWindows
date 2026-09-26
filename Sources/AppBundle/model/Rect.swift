@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct Rect: ConvenienceMutable, AeroAny {
@@ -25,17 +25,11 @@ struct Rect: ConvenienceMutable, AeroAny {
     }
 }
 
-extension CGRect {
-    func monitorFrameNormalized() -> Rect {
-        let mainMonitorHeight: CGFloat = mainMonitorInfo.height
-        let rect = toRect()
-        return rect.copy(\.topLeftY, mainMonitorHeight - rect.topLeftY)
-    }
-}
+
 
 extension CGRect {
     func toRect() -> Rect {
-        Rect(topLeftX: minX, topLeftY: maxY, width: width, height: height)
+        Rect(topLeftX: minX, topLeftY: minY, width: width, height: height)
     }
 }
 

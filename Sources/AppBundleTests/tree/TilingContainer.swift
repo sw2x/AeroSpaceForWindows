@@ -1,5 +1,5 @@
 @testable import AppBundle
-import AppKit
+import Foundation
 
 extension TilingContainer {
     @MainActor

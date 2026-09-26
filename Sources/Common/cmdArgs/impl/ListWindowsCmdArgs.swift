@@ -16,7 +16,7 @@ public struct ListWindowsCmdArgs: CmdArgs {
             "--monitor": ArgParser(\.filteringOptions.monitors, parseMonitorIds),
             "--workspace": ArgParser(\.filteringOptions.workspaces, parseWorkspaces),
             "--pid": singleValueSubArgParser(\.filteringOptions.pidFilter, "<pid>") { Int32($0).toResult("Can't convert to Int32") },
-            "--app-bundle-id": singleValueSubArgParser(\.filteringOptions.appIdFilter, "<app-bundle-id>", Result.success),
+            "--app-id": singleValueSubArgParser(\.filteringOptions.appIdFilter, "<app-id>", Result.success),
 
             // Formatting flags
             "--format": formatParser(\._format, for: .window),
@@ -61,7 +61,7 @@ extension ListWindowsCmdArgs {
 }
 
 func parseListWindowsCmdArgs(_ args: StrArrSlice) -> ParsedCmd<ListWindowsCmdArgs> {
-    let args = args.map { $0 == "--app-id" ? "--app-bundle-id" : $0 }.slice // Compatibility
+    let args = args.map { $0 == "--app-id" ? "--app-id" : $0 }.slice // Compatibility
     return parseSpecificCmdArgs(ListWindowsCmdArgs(commonState: .init(args)), args)
         .filter("Mandatory option is not specified (--focused|--all|--monitor|--workspace)") { raw in
             raw.filteringOptions.focused || raw.allAlias || !raw.filteringOptions.monitors.isEmpty || !raw.filteringOptions.workspaces.isEmpty
@@ -192,16 +192,16 @@ public enum FormatVar: RawRepresentable, Equatable, CaseIterable, Sendable {
     }
 
     public enum AppFormatVar: String, Equatable, CaseIterable, Sendable {
-        case appBundleId = "app-bundle-id"
+        case appId = "app-id"
         case appName = "app-name"
         case appPid = "app-pid"
         case appExecPath = "app-exec-path"
-        case appBundlePath = "app-bundle-path"
+        case appExecutableDirectory = "app-executable-directory"
     }
 
     public enum MonitorFormatVar: String, Equatable, CaseIterable, Sendable {
         case monitorId_oneBased = "monitor-id"
-        case monitorAppKitNsScreenScreensId = "monitor-appkit-nsscreen-screens-id"
+        case nativeMonitorIndex = "monitor-native-index"
         case monitorName = "monitor-name"
         case monitorIsMain = "monitor-is-main"
     }

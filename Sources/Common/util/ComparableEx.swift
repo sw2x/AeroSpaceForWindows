@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 
 extension Comparable {
     public func until(incl bound: Self) -> ClosedRange<Self>? { self <= bound ? self ... bound : nil }

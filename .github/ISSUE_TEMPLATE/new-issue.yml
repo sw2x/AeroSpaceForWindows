@@ -1,23 +1,22 @@
-name: New Issue
-description: New Issue
+name: Windows bug report
+description: Report a problem in the Windows port
 body:
-  - type: markdown
+  - type: input
+    id: version
     attributes:
-      value: |
-        AeroSpace project doesn't accept Issues directly. Please prefer GitHub Discussions. See: https://github.com/nikitabobko/AeroSpace/issues/947
-  - type: checkboxes
-    id: checkbox
-    attributes:
-      label: 'Sanity check'
-      options:
-        - label: |
-            I read https://github.com/nikitabobko/AeroSpace/issues/947
-          required: true
-  - type: textarea
-    id: body
-    attributes:
-      label: Body
-      value: |
-        YOUR ISSUE WILL BE IMMEDIATELY CLOSED BY BOT, DON'T OPEN NEW ISSUES DIRECTLY, USE DISCUSSIONS INSTEAD
+      label: AeroSpace and Windows versions
+      description: Include aerospace --version and your Windows version.
     validations:
       required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include affected applications and what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration and diagnostics
+      description: Share relevant configuration, list-windows/list-monitors output, or screenshots. Remove private titles and paths.

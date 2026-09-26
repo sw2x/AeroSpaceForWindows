@@ -1,9 +1,6 @@
-import AppKit
-import Darwin
 import Foundation
+import NativeWindows
 
-public let socketPath = "/tmp/\(aeroSpaceAppId)-\(unixUserName).sock"
-public let unixUserName = NSUserName()
 public let mainModeId = "main"
 
 @TaskLocal
@@ -23,9 +20,8 @@ public func bugPrompt(
     let _message = __message.contains("\n") ? "\n" + __message.prefixLines(with: "    ") : __message
     let thread = Thread.current
     return """
-        Please report to:
-            https://github.com/nikitabobko/AeroSpace/discussions/categories/potential-bugs
-            Please describe what you did to trigger this error
+        Please include this diagnostic when reporting a Windows port issue.
+        Describe what you did to trigger this error.
 
         Message: \(_message)
         Version: \(aeroSpaceAppVersion)
@@ -34,14 +30,11 @@ public func bugPrompt(
         Date: \(Date.now)
         Thread name: \(thread.name.prettyDescription)
         Is main thread: \(thread.isMainThread)
-        axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken.prettyDescription)
-        macOS version: \(ProcessInfo().operatingSystemVersionString)
+        Windows version: \(ProcessInfo.processInfo.operatingSystemVersionString)
         Coordinate: \(file):\(line):\(column) \(function)
         recursionDetectorDuringTermination: \(recursionDetectorDuringTermination)
         cli: \(isCli)
         die: \(isDie)
-        Monitor count: \(NSScreen.screens.count)
-        Displays have separate spaces: \(NSScreen.screensHaveSeparateSpaces)
 
         Stacktrace:
         \(getStringStacktrace())
@@ -66,23 +59,13 @@ public func dieT<T>(
         )
     }
     if let terminationHandler, !recursionDetectorDuringTermination {
-        MainActor.runSync {
-            $recursionDetectorDuringTermination.withValue(true) {
-                terminationHandler.beforeTermination()
-            }
+        $recursionDetectorDuringTermination.withValue(true) {
+            terminationHandler.beforeTermination()
         }
     }
     fatalError("\n" + message)
 }
 
-extension MainActor {
-    static func runSync(block: @escaping @MainActor () -> ()) {
-        switch Thread.isMainThread {
-            case true: MainActor.assumeIsolated(block)
-            case false: DispatchQueue.main.asyncAndWait { block() }
-        }
-    }
-}
 
 public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
     case configAutoReload
@@ -123,7 +106,7 @@ public enum RefreshSessionEvent: Sendable, CustomStringConvertible {
 // periphery:ignore
 public func throwT<T, E: Error>(_ error: E) throws(E) -> T { throw error }
 
-public func getStringStacktrace() -> String { Thread.callStackSymbols.joined(separator: "\n") }
+public func getStringStacktrace() -> String { "" }
 
 @inlinable public func die(
     _ message: String = "",
@@ -148,7 +131,7 @@ public func check(
     }
 }
 
-public var isUnitTest: Bool { NSClassFromString("XCTestCase") != nil }
+nonisolated(unsafe) public var isUnitTest: Bool = false
 
 extension CaseIterable where Self: RawRepresentable, RawValue == String {
     public static var cliArgsCases: [String] { allCases.map(\.rawValue) }
@@ -188,14 +171,10 @@ extension Bool {
     public func implies(_ mustHold: @autoclosure () -> Bool) -> Bool { !self || mustHold() }
 }
 
-extension URL {
-    public func open(with url: URL) {
-        NSWorkspace.shared.open([self], withApplicationAt: url, configuration: NSWorkspace.OpenConfiguration())
-    }
-}
+extension URL { public func open(with url: URL) { aw_open_file(path) } }
 
 public func eprint(_ msg: String) {
-    unsafe fputs(msg + "\n", stderr)
+    aw_stderr(msg + "\n")
 }
 
 public func exit(_ exitCode: Int32, out: String? = nil, err: String? = nil) -> Never {
@@ -205,7 +184,8 @@ public func exit(_ exitCode: Int32, out: String? = nil, err: String? = nil) -> N
 public func exitT<T>(_ exitCode: Int32, out: String? = nil, err: String? = nil) -> T {
     if let out { print(out) }
     if let err { eprint(err) }
-    exit(exitCode)
+    aw_exit(exitCode)
+    fatalError("Unreachable")
 }
 
 /// 'id' stands for 'identity'. It's a common name in functional programming

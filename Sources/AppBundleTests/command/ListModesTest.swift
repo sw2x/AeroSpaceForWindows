@@ -3,7 +3,7 @@ import Common
 import XCTest
 
 final class ListModesTest: XCTestCase {
-    func testParseListModesCommand() {
+    func testParseListModesCommand() async {
         testParseSingleCommandSucc("list-modes", ListModesCmdArgs(rawArgs: []))
         testParseSingleCommandSucc("list-modes --current", ListModesCmdArgs(rawArgs: []).copy(\.current, true))
         testParseSingleCommandSucc("list-modes --json", ListModesCmdArgs(rawArgs: []).copy(\.json, true))
@@ -11,7 +11,7 @@ final class ListModesTest: XCTestCase {
         testParseSingleCommandSucc("list-modes --current --json", ListModesCmdArgs(rawArgs: []).copy(\.current, true).copy(\.json, true))
     }
 
-    func testParseListModesCommandConflicts() {
+    func testParseListModesCommandConflicts() async {
         assertEquals(parseCommand("list-modes --json --count").errorOrNil, "ERROR: Conflicting options: --count, --json")
         assertEquals(parseCommand("list-modes --current --count").errorOrNil, "ERROR: Conflicting options: --count, --current")
     }

@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 let testEnv = ["PATH": "AEROSPACE_TEST_PATH", "AEROSPACE_INHERITED_TEST_ENV": "inherited"]
@@ -11,7 +11,7 @@ private let rawExecConfigParser: [String: any ParserProtocol<RawExecConfig>] = [
     "env-vars": Parser(\.overriddenVars, parseEnvVariables),
 ]
 
-let defaultOverriddenEnvVars = ["PATH": "/opt/homebrew/bin:/opt/homebrew/sbin:\(env["PATH"] ?? "")"]
+let defaultOverriddenEnvVars: [String: String] = [:]
 
 struct ExecConfig: Equatable {
     var envVariables: [String: String] = env + defaultOverriddenEnvVars

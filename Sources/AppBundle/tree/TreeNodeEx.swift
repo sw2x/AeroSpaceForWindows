@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 extension TreeNode {
@@ -39,10 +39,10 @@ extension TreeNode {
             case .workspace(let ws): ws.workspaceMonitor
             case .window,
                  .tilingContainer,
-                 .macosFullscreenWindowsContainer,
-                 .macosHiddenAppsWindowsContainer,
+                 .nativeFullscreenWindowsContainer,
+                 .nativeHiddenWindowsContainer,
                  .floatingWindowsContainer: parent?.nodeMonitor
-            case .macosMinimizedWindowsContainer, .macosPopupWindowsContainer: nil
+            case .nativeMinimizedWindowsContainer, .nativePopupWindowsContainer: nil
         }
     }
 
@@ -87,11 +87,11 @@ extension TreeNode {
         let innermostChild = parentsWithSelf.first(where: { (node: TreeNode) -> Bool in
             return switch node.parent?.cases {
                 // stop searching. We didn't find it, or something went wrong
-                case .workspace, nil, .macosMinimizedWindowsContainer,
+                case .workspace, nil, .nativeMinimizedWindowsContainer,
                      .floatingWindowsContainer,
-                     .macosFullscreenWindowsContainer,
-                     .macosHiddenAppsWindowsContainer,
-                     .macosPopupWindowsContainer:
+                     .nativeFullscreenWindowsContainer,
+                     .nativeHiddenWindowsContainer,
+                     .nativePopupWindowsContainer:
                     true
                 case .tilingContainer(let parent):
                     (layout == nil || parent.layout == layout) &&
@@ -104,8 +104,8 @@ extension TreeNode {
             case .tilingContainer(let parent):
                 check(parent.orientation == direction.orientation)
                 return innermostChild.ownIndex.map { (parent, $0) }
-            case .workspace, .floatingWindowsContainer, nil, .macosMinimizedWindowsContainer,
-                 .macosFullscreenWindowsContainer, .macosHiddenAppsWindowsContainer, .macosPopupWindowsContainer:
+            case .workspace, .floatingWindowsContainer, nil, .nativeMinimizedWindowsContainer,
+                 .nativeFullscreenWindowsContainer, .nativeHiddenWindowsContainer, .nativePopupWindowsContainer:
                 return nil
         }
     }

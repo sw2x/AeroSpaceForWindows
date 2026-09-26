@@ -1,45 +1,20 @@
-import Common
 import Foundation
+import Common
 
-private struct ConfigFileWatcher: ~Copyable {
-    private let source: DispatchSourceFileSystemObject
-    private let fd: Int32
-
-    init?(url: URL, onChange: @escaping @MainActor () -> Void) {
-        fd = unsafe open(url.path, O_EVTONLY)
-        if fd < 0 { return nil }
-        source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .delete, .rename, .revoke],
-            queue: .main,
-        )
-        source.setEventHandler { MainActor.checkIsolated { onChange() } }
-        source.setCancelHandler { [fd] in close(fd) }
-        source.activate()
-    }
-
-    deinit {
-        source.cancel()
-    }
-}
-
-@MainActor private var currentWatcher: ConfigFileWatcher? = nil
-@MainActor private var debounceTask: Task<Void, any Error>? = nil
-
-private let debounceDelay: Duration = .milliseconds(200)
-
+@MainActor private var watcher: Task<Void, Never>?
 @MainActor func syncConfigFileWatcher() {
-    currentWatcher = nil
-    if !config.autoReloadConfig { return }
-    currentWatcher = ConfigFileWatcher(url: configUrl) {
-        debounceTask?.cancel()
-        debounceTask = Task.startUnstructured {
-            try await Task.sleep(for: debounceDelay)
-            if let token: RunSessionGuard = .isServerEnabled {
-                try await runLightSession(.configAutoReload, token) {
-                    _ = await reloadConfig_nonCancellable()
-                }
-            }
+    watcher?.cancel()
+    guard config.autoReloadConfig else { watcher = nil; return }
+    let url = configUrl
+    watcher = Task { @MainActor in
+        var previous = try? Data(contentsOf: url)
+        while !Task.isCancelled {
+            do { try await Task.sleep(for: .milliseconds(500)) } catch { break }
+            guard let current = try? Data(contentsOf: url), current != previous else { continue }
+            previous = current
+            let result = await reloadConfig_nonCancellable()
+            if !result.isOk { eprint(result.stdout + result.stderr) }
+            if result.isOk { break } // A successful reload installs the replacement watcher.
         }
     }
 }

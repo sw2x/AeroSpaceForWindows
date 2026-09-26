@@ -1,70 +1,13 @@
-import AppKit
-import Common
 import Foundation
-import os
+import Common
+import NativeWindows
 
-let signposter = OSSignposter(subsystem: aeroSpaceAppId, category: .pointsOfInterest)
-
-let myPid = NSRunningApplication.current.processIdentifier
-let lockScreenAppBundleId = "com.apple.loginwindow"
-
-func interceptTermination(_ _signal: Int32) {
-    signal(_signal, { (signal: Int32) in
-        check(Thread.current.isMainThread)
-        Task.startUnstructured { @MainActor in
-            terminationHandler?.beforeTermination()
-            exit(signal)
-        }
-    } as sig_t)
-}
-
-@MainActor
-func initTerminationHandler() {
-    unsafe _terminationHandler = AppServerTerminationHandler()
-}
-
+let myPid = Int32(bitPattern: aw_pid())
+@MainActor func initTerminationHandler() { _terminationHandler = AppServerTerminationHandler() }
 private struct AppServerTerminationHandler: TerminationHandler {
-    @MainActor
-    func beforeTermination() {
-        // Make all windows fullscreen before Quit
-        for window in MacWindow.allWindowsMap.values {
-            // makeAllWindowsVisibleAndRestoreSize may be invoked when something went wrong (e.g. some windows are unbound)
-            // that's why it's not allowed to use `.parent` call in here
-            let monitor = window.macApp.getAxRectForTermination(window.windowId)?.center.monitorApproximation ?? mainMonitorInfo
-            let monitorVisibleRect = monitor.visibleRect
-            let windowSize = window.lastFloatingSize ?? CGSize(width: monitorVisibleRect.width, height: monitorVisibleRect.height)
-            let point = CGPoint(
-                x: (monitorVisibleRect.width - windowSize.width) / 2,
-                y: (monitorVisibleRect.height - windowSize.height) / 2,
-            )
-            window.macApp.setAxFrameForTermination(window.windowId, point, windowSize)
-        }
-        if isDebug {
-            let semaphore = DispatchSemaphore(value: 0)
-            // Use Task.detached to avoid inheriting @MainActor.
-            // If @MainActor was inherited, it would cause a deadlock
-            Task.detached {
-                await toggleReleaseServerIfDebug(.on)
-                semaphore.signal()
-            }
-            semaphore.wait()
-        }
-    }
+    func beforeTermination() { aw_shutdown() }
 }
-
-@MainActor
-func terminateApp() -> Never {
-    NSApplication.shared.terminate(nil)
-    die("Unreachable code")
-}
-
-extension String {
-    func copyToClipboard() {
-        let pasteboard = NSPasteboard.general
-        pasteboard.declareTypes([.string], owner: nil)
-        pasteboard.setString(self, forType: .string)
-    }
-}
+@MainActor func terminateApp() -> Never { aw_shutdown(); Common.exit(0) }
 
 func - (a: CGPoint, b: CGPoint) -> CGPoint {
     CGPoint(x: a.x - b.x, y: a.y - b.y)
@@ -120,13 +63,6 @@ extension CGFloat {
             case self < range.lowerBound: range.lowerBound
             default: self
         }
-    }
-}
-
-extension CGPoint: @retroactive Hashable { // todo migrate to self written Point
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(x)
-        hasher.combine(y)
     }
 }
 

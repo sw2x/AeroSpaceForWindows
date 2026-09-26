@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 @MainActor private var workspaceNameToWorkspace: [String: Workspace] = [:]

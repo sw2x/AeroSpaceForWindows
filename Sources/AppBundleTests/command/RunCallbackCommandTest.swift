@@ -6,7 +6,7 @@ import XCTest
 final class RunCallbackCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         testParseSingleCommandSucc(
             "run-callback on-window-detected",
             RunCallbackCmdArgs(rawArgs: []).copy(\.callback, .initialized(.onWindowDetected)),
@@ -33,7 +33,7 @@ final class RunCallbackCommandTest: XCTestCase {
         )
     }
 
-    func testParseFailure() {
+    func testParseFailure() async {
         testParseCommandFail("run-callback", msg: "ERROR: Argument '<callback>' is mandatory", exitCode: 2)
         testParseCommandFail(
             "run-callback bogus",

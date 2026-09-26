@@ -16,8 +16,6 @@ extension CmdArgs {
                 command = CloseAllWindowsButCurrentCommand(args: self as! CloseAllWindowsButCurrentCmdArgs)
             case .config:
                 command = ConfigCommand(args: self as! ConfigCmdArgs)
-            case .debugWindows:
-                command = DebugWindowsCommand(args: self as! DebugWindowsCmdArgs)
             case .echo:
                 command = EchoCommand(args: self as! EchoCmdArgs)
             case .enable:
@@ -52,16 +50,10 @@ extension CmdArgs {
                 command = ListWindowsCommand(args: self as! ListWindowsCmdArgs)
             case .listWorkspaces:
                 command = ListWorkspacesCommand(args: self as! ListWorkspacesCmdArgs)
-            case .macosNativeFullscreen:
-                command = MacosNativeFullscreenCommand(args: self as! MacosNativeFullscreenCmdArgs)
-            case .macosNativeMinimize:
-                command = MacosNativeMinimizeCommand(args: self as! MacosNativeMinimizeCmdArgs)
             case .mode:
                 command = ModeCommand(args: self as! ModeCmdArgs)
             case .move:
                 command = MoveCommand(args: self as! MoveCmdArgs)
-            case .moveMouse:
-                command = MoveMouseCommand(args: self as! MoveMouseCmdArgs)
             case .moveNodeToMonitor:
                 command = MoveNodeToMonitorCommand(args: self as! MoveNodeToMonitorCmdArgs)
             case .moveNodeToWorkspace:
@@ -76,8 +68,6 @@ extension CmdArgs {
                 command = RunCallbackCommand(args: self as! RunCallbackCmdArgs)
             case .split:
                 command = SplitCommand(args: self as! SplitCmdArgs)
-            case .subscribe:
-                return .failure("subscribe is not supported in the eval", EXIT_CODE_TWO)
             case .summonWorkspace:
                 command = SummonWorkspaceCommand(args: self as! SummonWorkspaceCmdArgs)
             case .swap:
@@ -88,8 +78,6 @@ extension CmdArgs {
                 command = TestNotCommand(args: self as! TestNotCmdArgs)
             case .triggerBinding:
                 command = TriggerBindingCommand(args: self as! TriggerBindingCmdArgs)
-            case .volume:
-                command = VolumeCommand(args: self as! VolumeCmdArgs)
             case .workspace:
                 command = WorkspaceCommand(args: self as! WorkspaceCmdArgs)
             case .workspaceBackAndForth:

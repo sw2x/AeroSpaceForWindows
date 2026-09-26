@@ -2,12 +2,12 @@ import Common
 
 protocol AbstractApp: AnyObject, Hashable, AeroAny {
     var pid: Int32 { get }
-    var rawAppBundleId: String? { get }
+    var rawAppId: String? { get }
 
     @MainActor func getFocusedWindow(_ cm: CancellationMode) async throws -> Window?
     var name: String? { get }
     var execPath: String? { get }
-    var bundlePath: String? { get }
+    var executableDirectory: String? { get }
 }
 
 extension AbstractApp {
@@ -27,5 +27,5 @@ extension AbstractApp {
 }
 
 extension Window {
-    var macAppUnsafe: MacApp { app as! MacApp }
+    var desktopAppUnsafe: DesktopApp { app as! DesktopApp }
 }

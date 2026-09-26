@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 enum EffectiveLeaf {
@@ -175,10 +175,7 @@ extension Workspace {
         workspace: newWorkspace,
         prevWorkspace: oldWorkspace,
     ))
-    if let exec = config.execOnWorkspaceChange.first {
-        let process = Process()
-        process.executableURL = URL(filePath: exec)
-        process.arguments = Array(config.execOnWorkspaceChange.dropFirst())
+    if !serverArgs.isReadOnly, TrayMenuModel.shared.isEnabled, let exec = config.execOnWorkspaceChange.first {
         var environment = config.execConfig.envVariables
         environment[AEROSPACE_FOCUSED_WORKSPACE] = newWorkspace
         environment[AEROSPACE_PREV_WORKSPACE] = oldWorkspace
@@ -190,7 +187,6 @@ extension Workspace {
                 environment[AEROSPACE_WORKSPACE] = nil
                 environment[AEROSPACE_WINDOW_ID] = w.windowId.description
         }
-        process.environment = environment
-        _ = Result { try process.run() }
+        _ = launchProcess(executable: exec, arguments: Array(config.execOnWorkspaceChange.dropFirst()), environment: environment)
     }
 }

@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct LayoutCommand: Command {
@@ -16,13 +16,13 @@ struct LayoutCommand: Command {
                         node = .floatingWindowsContainer(it)
                     case .tilingContainer(let it):
                         node = .tilingContainer(it)
-                    case .macosFullscreenWindowsContainer,
-                         .macosHiddenAppsWindowsContainer,
-                         .macosMinimizedWindowsContainer:
-                        let msg = "Can't change layout for macOS minimized, fullscreen windows or windows or hidden apps. " +
+                    case .nativeFullscreenWindowsContainer,
+                         .nativeHiddenWindowsContainer,
+                         .nativeMinimizedWindowsContainer:
+                        let msg = "Can't change layout for native minimized, fullscreen windows or windows or hidden apps. " +
                             "This behavior is subject to change"
                         return .fail(io.err(msg))
-                    case .unbound, .macosPopupWindowsContainer:
+                    case .unbound, .nativePopupWindowsContainer:
                         return .fail(io.err(bugPrompt()))
                 }
             case nil:
@@ -63,7 +63,7 @@ struct LayoutCommand: Command {
                     case .tilingContainer:
                         return .succ // Nothing to do
                     case .floatingWindowsContainer(let container):
-                        window.lastFloatingSize = (try? await window.getAxSize(.nonCancellable)) ?? window.lastFloatingSize
+                        window.lastFloatingSize = (try? await window.getNativeSize(.nonCancellable)) ?? window.lastFloatingSize
                         guard let workspace = container.nodeWorkspace else { return .fail(io.err(bugPrompt())) }
                         do {
                             try await window.relayoutWindow(on: workspace, .nonCancellable, forceTile: true)
@@ -76,7 +76,7 @@ struct LayoutCommand: Command {
                 guard let window = target.windowOrNil else { return .fail(io.err(noWindowIsFocused)) }
                 let workspace = target.workspace
                 window.bindAsFloatingWindow(to: workspace)
-                if let size = window.lastFloatingSize { window.setAxFrame(nil, size) }
+                if let size = window.lastFloatingSize { window.setNativeFrame(nil, size) }
                 return .succ
         }
     }

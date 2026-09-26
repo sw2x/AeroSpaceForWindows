@@ -3,17 +3,17 @@ import Common
 
 final class TestApp: AbstractApp {
     let pid: Int32
-    let rawAppBundleId: String?
+    let rawAppId: String?
     let name: String?
     let execPath: String? = nil
-    let bundlePath: String? = nil
+    let executableDirectory: String? = nil
     @MainActor
     static let shared = TestApp()
 
     private init() {
         self.pid = 0
-        self.rawAppBundleId = "bobko.AeroSpace.test-app"
-        self.name = rawAppBundleId
+        self.rawAppId = "bobko.AeroSpace.test-app"
+        self.name = rawAppId
     }
 
     var _windows: [Window] = []

@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 open class TreeNode: Equatable, AeroAny {
@@ -56,10 +56,10 @@ open class TreeNode: Equatable, AeroAny {
             case .tiling(let parent):
                 parent.orientation == targetOrientation ? adaptiveWeight : parent.getWeight(targetOrientation)
             case .rootTilingContainer: parent.getWeight(targetOrientation)
-            case .floatingWindow, .macosNativeFullscreenWindow: dieT("Weight doesn't make sense for floating windows")
-            case .macosNativeMinimizedWindow: dieT("Weight doesn't make sense for minimized windows")
-            case .macosPopupWindow: dieT("Weight doesn't make sense for popup windows")
-            case .macosNativeHiddenAppWindow: dieT("Weight doesn't make sense for windows of hidden apps")
+            case .floatingWindow, .nativeFullscreenWindow: dieT("Weight doesn't make sense for floating windows")
+            case .nativeMinimizedWindow: dieT("Weight doesn't make sense for minimized windows")
+            case .nativePopupWindow: dieT("Weight doesn't make sense for popup windows")
+            case .nativeHiddenWindow: dieT("Weight doesn't make sense for windows of hidden apps")
             case .shimContainerRelation: dieT("Weight doesn't make sense for stub containers")
         }
     }
@@ -77,9 +77,9 @@ open class TreeNode: Equatable, AeroAny {
             self.adaptiveWeight = switch relation {
                 case .tiling(let newParent):
                     CGFloat(newParent.children.sumOfDouble { $0.getWeight(newParent.orientation) }).div(newParent.children.count) ?? 1
-                case .floatingWindow, .macosNativeFullscreenWindow,
-                     .rootTilingContainer, .macosNativeMinimizedWindow,
-                     .shimContainerRelation, .macosPopupWindow, .macosNativeHiddenAppWindow:
+                case .floatingWindow, .nativeFullscreenWindow,
+                     .rootTilingContainer, .nativeMinimizedWindow,
+                     .shimContainerRelation, .nativePopupWindow, .nativeHiddenWindow:
                     WEIGHT_DOESNT_MATTER
             }
         } else {

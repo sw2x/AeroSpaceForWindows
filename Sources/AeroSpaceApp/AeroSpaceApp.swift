@@ -1,25 +1,17 @@
+import Foundation
 import AppBundle
-import SwiftUI
+import Common
+import NativeWindows
 
-// This file is shared between SPM and xcode project
-
-@main
-struct AeroSpaceApp: App {
-    @StateObject var viewModel = TrayMenuModel.shared
-    @StateObject var messageModel = MessageModel.shared
-    @Environment(\.openWindow) var openWindow: OpenWindowAction
-
-    init() {
-        initAppBundle()
-    }
-
-    var body: some Scene {
-        menuBar(viewModel: viewModel)
-        getMessageWindow(messageModel: messageModel)
-            .onChange(of: messageModel.message) { message in
-                if message != nil {
-                    openWindow(id: messageWindowId)
-                }
-            }
+@main struct Main {
+    static func main() async {
+        let args = Array(CommandLine.arguments.dropFirst())
+        if args.count == 2, args[0] == "--watchdog", let parent = UInt32(args[1]) { Common.exit(aw_watchdog(parent)) }
+        if args.contains("--help") || args.contains("-h") {
+            Common.exit(0, out: "USAGE: AeroSpaceApp.exe [--config-path <path>] [--read-only] [--manage-process <pid>]")
+        }
+        if args == ["--version"] || args == ["-v"] { Common.exit(0, out: "AeroSpace for Windows \(aeroSpaceAppVersion)") }
+        guard aw_initialize() != 0 else { Common.exit(2, err: "AeroSpace is already running, or initialization failed") }
+        await initAppBundle(args: args)
     }
 }

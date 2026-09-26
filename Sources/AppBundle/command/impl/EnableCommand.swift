@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct EnableCommand: Command {
@@ -6,6 +6,7 @@ struct EnableCommand: Command {
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
     func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
+        guard !serverArgs.isReadOnly else { return .fail(io.err("AeroSpace was started with --read-only")) }
         let prevState = TrayMenuModel.shared.isEnabled
         let newState: Bool = switch args.targetState.val {
             case .on: true
@@ -27,10 +28,13 @@ struct EnableCommand: Command {
         if newState {
             for workspace in Workspace.all {
                 for window in workspace.allLeafWindowsRecursive where window.isFloating {
-                    window.lastFloatingSize = (try? await window.getAxSize(.nonCancellable)) ?? window.lastFloatingSize
+                    window.lastFloatingSize = (try? await window.getNativeSize(.nonCancellable)) ?? window.lastFloatingSize
                 }
             }
-            await activateMode_nonCancellable(mainModeId)
+            if !(await activateMode_nonCancellable(mainModeId)) {
+                TrayMenuModel.shared.isEnabled = false
+                return .fail(io.err("Cannot enable AeroSpace because a hotkey is unavailable"))
+            }
         } else {
             await activateMode_nonCancellable(nil)
         }

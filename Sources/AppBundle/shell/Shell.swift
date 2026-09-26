@@ -99,7 +99,15 @@ extension Shell where T == any Command {
     @MainActor func run(_ env: CmdEnv, _ io: CmdIo) async -> Int32ExitCode {
         switch self {
             case .cmd(let command):
+                // Callbacks and compound commands use this entry point too.
+                // Enforce the same policy as direct CLI commands here.
+                guard RunSessionGuard.isServerEnabled(orIsEnableCommand: command) != nil else {
+                    return .fail(io.err(serverArgs.isReadOnly
+                        ? "AeroSpace was started with --read-only"
+                        : "AeroSpace is disabled; use 'aerospace enable on'"))
+                }
                 let exitCode = Int32ExitCode(rawValue: await command.run(env, io).rawValue)
+                recordNativeFocusIntent(command, exitCode: exitCode.rawValue)
                 if command.shouldResetClosedWindowsCache { resetClosedWindowsCache() }
                 await refreshModel_nonCancellable()
                 return exitCode

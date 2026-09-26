@@ -6,7 +6,7 @@ import XCTest
 final class ListWorkspacesTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         assertNotNil(parseCommand("list-workspaces --all").cmdOrNil)
         assertNil(parseCommand("list-workspaces --all --visible").cmdOrNil)
         assertNil(parseCommand("list-workspaces --focused --visible").cmdOrNil)

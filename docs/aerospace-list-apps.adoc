@@ -2,14 +2,14 @@
 include::util/man-attributes.adoc[]
 :manname: aerospace-list-apps
 // tag::purpose[]
-:manpurpose: Print the list of running applications that appears in the Dock and may have a user interface
+:manpurpose: Print applications owning windows managed by AeroSpace
 // end::purpose[]
 
 // =========================================================== Synopsis
 == Synopsis
 [verse]
 // tag::synopsis[]
-aerospace list-apps [-h|--help] [--macos-native-hidden [no]] [--format <output-format>] [--count] [--json]
+aerospace list-apps [-h|--help] [--format <output-format>] [--count] [--json]
 
 // end::synopsis[]
 
@@ -26,9 +26,6 @@ include::util/conditional-options-header.adoc[]
 
 -h, --help:: Print help
 
---macos-native-hidden [no]::
-Filter results to only print hidden applications.
-`[no]` inverts the condition
 
 --format <output-format>:: Specify output format. See "Output Format" section for more details.
 Incompatible with `--count`
@@ -47,15 +44,15 @@ Output format can be configured with optional `[--format <output-format>]` optio
 `<output-format>` supports https://en.wikipedia.org/wiki/String_interpolation[string interpolation].
 
 If not specified, the default `<output-format>` is: +
-`%{app-pid}%{right-padding} | %{app-bundle-id}%{right-padding} | %{app-name}`
+`%{app-pid}%{right-padding} | %{app-id}%{right-padding} | %{app-name}`
 
 The following variables can be used inside `<output-format>`:
 
-%{app-bundle-id}:: String. Application unique identifier. https://developer.apple.com/documentation/appstoreconnectapi/bundle_ids[Bundle ID]
+%{app-id}:: String. Application executable filename in lowercase, such as `notepad.exe`
 %{app-name}:: String. Application name
-%{app-pid}:: Number. https://en.wikipedia.org/wiki/Process_identifier[UNIX process identifier]
+%{app-pid}:: Number. Windows process identifier
 %{app-exec-path}:: String. Application executable path
-%{app-bundle-path}:: String. Application bundle path
+%{app-executable-directory}:: String. Directory containing the application executable
 
 %{right-padding}:: A special variable which expands with a minimum number of spaces required to form a right padding in the appropriate column
 %{newline}:: Unicode U+000A newline symbol `\n`

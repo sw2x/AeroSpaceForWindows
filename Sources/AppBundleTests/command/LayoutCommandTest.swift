@@ -6,7 +6,7 @@ import XCTest
 final class LayoutCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         assertNil(parseCommand("layout v_tiles h_tiles").errorOrNil)
         assertNil(parseCommand("layout tiling").errorOrNil)
         assertNil(parseCommand("layout floating tiling").errorOrNil)
@@ -273,11 +273,11 @@ final class LayoutCommandTest: XCTestCase {
         assertEquals(workspace.floatingWindows.map(\.windowId), [1])
     }
 
-    func testRoot_macosFullscreenFocusedWindow_changesRootTilingContainer() async {
+    func testRoot_nativeFullscreenFocusedWindow_changesRootTilingContainer() async {
         let workspace = Workspace.get(byName: name)
-        assertEquals(TestWindow.new(id: 1, parent: workspace.macOsNativeFullscreenWindowsContainer).focusWindow(), true)
+        assertEquals(TestWindow.new(id: 1, parent: workspace.nativeFullscreenWindowsContainer).focusWindow(), true)
 
-        // Without --root this would fail with "Can't change layout for macOS minimized, fullscreen…".
+        // Without --root this would fail with "Can't change layout for native minimized, fullscreen…".
         await parseCommand("layout --root v_accordion").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(workspace.rootTilingContainer.layout, .accordion)
         assertEquals(workspace.rootTilingContainer.orientation, .v)

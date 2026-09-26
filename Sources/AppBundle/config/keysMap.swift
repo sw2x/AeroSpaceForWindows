@@ -1,6 +1,36 @@
-import AppKit
+import Foundation
+
+struct KeyModifiers: OptionSet, Sendable {
+    let rawValue: UInt32
+    init(rawValue: UInt32) { self.rawValue = rawValue }
+    init(_ flags: [Self]) { rawValue = flags.reduce(0) { $0 | $1.rawValue } }
+    static let option = Self(rawValue: 1)
+    static let control = Self(rawValue: 2)
+    static let shift = Self(rawValue: 4)
+    static let command = Self(rawValue: 8) // Windows key; retained as an internal enum name.
+}
+
+enum Key: String, Sendable {
+    case a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, zero, one, two, three, four, five, six, seven, eight, nine, period, quote, leftBracket, rightBracket, semicolon, slash, backslash, comma, equal, grave, minus, space, tab, `return`, pageUp, pageDown, home, end, leftArrow, downArrow, upArrow, rightArrow, escape, delete, section, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, keypad0, keypad1, keypad2, keypad3, keypad4, keypad5, keypad6, keypad7, keypad8, keypad9, keypadClear, keypadDecimal, keypadDivide, keypadEnter, keypadEquals, keypadMinus, keypadMultiply, keypadPlus, command, rightCommand, option, rightOption, control, rightControl, shift, rightShift, function, capsLock, forwardDelete, help, volumeUp, volumeDown, mute
+    var virtualKey: UInt32? {
+        if rawValue.count == 1, let c = rawValue.uppercased().unicodeScalars.first, c.value >= 65, c.value <= 90 { return c.value }
+        let numbers: [String] = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+        if let digit = numbers.firstIndex(of: rawValue) { return UInt32(0x30 + digit) }
+        if rawValue.hasPrefix("f"), let n = Int(rawValue.dropFirst()), (1...24).contains(n) { return UInt32(0x70 + n - 1) }
+        if rawValue.hasPrefix("keypad"), let n = Int(rawValue.dropFirst(6)), (0...9).contains(n) { return UInt32(0x60 + n) }
+        return ["minus": 0xBD, "equal": 0xBB, "leftBracket": 0xDB, "rightBracket": 0xDD, "backslash": 0xDC,
+            "semicolon": 0xBA, "quote": 0xDE, "comma": 0xBC, "period": 0xBE, "slash": 0xBF, "grave": 0xC0,
+            "space": 0x20, "return": 0x0D, "escape": 0x1B, "delete": 0x08, "tab": 0x09,
+            "leftArrow": 0x25, "upArrow": 0x26, "rightArrow": 0x27, "downArrow": 0x28,
+            "pageUp": 0x21, "pageDown": 0x22, "home": 0x24, "end": 0x23, "forwardDelete": 0x2E,
+            "keypadDecimal": 0x6E, "keypadDivide": 0x6F, "keypadEnter": 0x0D, "keypadMinus": 0x6D,
+            "keypadMultiply": 0x6A, "keypadPlus": 0x6B, "keypadClear": 0x0C][rawValue]
+    }
+}
+
+import Foundation
 import Common
-import HotKey
+
 
 private let minus = "minus"
 private let equal = "equal"
@@ -51,7 +81,7 @@ func getKeysPreset(_ layout: KeyMapping.Preset) -> [String: Key] {
     }
 }
 
-extension Key: @unchecked @retroactive Sendable {}
+
 
 let keyNotationToKeyCode: [String: Key] = [
     sectionSign: .section,
@@ -245,19 +275,19 @@ private let colemakMap: [String: Key] = keyNotationToKeyCode + [
     slash: .slash,
 ]
 
-let modifiersMap: [String: NSEvent.ModifierFlags] = [
+let modifiersMap: [String: KeyModifiers] = [
     "shift": .shift,
     "alt": .option,
     "ctrl": .control,
-    "cmd": .command,
+    "win": .command,
 ]
 
-extension NSEvent.ModifierFlags {
+extension KeyModifiers {
     func toString() -> String {
         var result: [String] = []
         if contains(.option) { result.append("alt") }
         if contains(.control) { result.append("ctrl") }
-        if contains(.command) { result.append("cmd") }
+        if contains(.command) { result.append("win") }
         if contains(.shift) { result.append("shift") }
         return result.joined(separator: "-")
     }
@@ -391,17 +421,17 @@ extension Key {
 }
 
 // doesn't work :(
-//extension NSEvent.ModifierFlags {
-//    static let lOption = NSEvent.ModifierFlags(rawValue: 1 << 1)
-//    static let rOption = NSEvent.ModifierFlags(rawValue: 1 << 2)
-//    static let lShift = NSEvent.ModifierFlags(rawValue: 0x00000002)
-//    static let rShift = NSEvent.ModifierFlags(rawValue: 0x00000004)
-//    static let lCommand = NSEvent.ModifierFlags(rawValue: 1 << 7)
-//    static let rCommand = NSEvent.ModifierFlags(rawValue: 0x00000010)
+//extension KeyModifiers {
+//    static let lOption = KeyModifiers(rawValue: 1 << 1)
+//    static let rOption = KeyModifiers(rawValue: 1 << 2)
+//    static let lShift = KeyModifiers(rawValue: 0x00000002)
+//    static let rShift = KeyModifiers(rawValue: 0x00000004)
+//    static let lCommand = KeyModifiers(rawValue: 1 << 7)
+//    static let rCommand = KeyModifiers(rawValue: 0x00000010)
 //}
 
-// NSEvent.ModifierFlags.command.rawValue // 1 << 20
-// NSEvent.ModifierFlags.option.rawValue // 1 << 19
-// NSEvent.ModifierFlags.control.rawValue // 1 << 18
-// NSEvent.ModifierFlags.shift.rawValue // 1 << 17
+// KeyModifiers.command.rawValue // 1 << 20
+// KeyModifiers.option.rawValue // 1 << 19
+// KeyModifiers.control.rawValue // 1 << 18
+// KeyModifiers.shift.rawValue // 1 << 17
 // https://github.com/koekeishiya/skhd/blob/master/src/hotkey.h

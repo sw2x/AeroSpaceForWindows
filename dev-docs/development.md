@@ -1,86 +1,51 @@
-# Development Notes
+# Windows development
 
-To build/install from sources do the following:
-1. Install dependencies
-2. Create codesign certificate in `Keychain Access.app`
-3. Run one of the entry point scripts to build/install from sources
+## Requirements
 
-If you struggle to build AeroSpace locally, you can also refer to [builds in GitHub Actions](https://github.com/nikitabobko/AeroSpace/actions?query=branch%3Amain)
+- Windows 11 x64.
+- Swift 6.4.0 Windows toolchain, including the Windows SDK and runtime components.
+- Visual Studio 2022 with Desktop development with C++ and a Windows SDK.
+- PowerShell 7 (`pwsh`). The build scripts locate Visual Studio using `vswhere` and import its compiler environment.
 
-## Definitions
+The repository's `.swift-version` and `Package.swift` define the Swift version. `script/Invoke-Swift.ps1` resolves `swift.exe`, supplies the compiler and SDK environment, and normalizes environment key casing. SwiftPM uses the native build engine explicitly.
 
-**SPM.** Swift package manager and Swift build tool. In other words, `swift` CLI tool
+## Build
 
-## 1. Install dependencies
+```powershell
+.\build.ps1
+.\build.ps1 -Configuration release
+```
 
-1.  Install Xcode from App Store https://apps.apple.com/us/app/xcode/id497799835
-2.  Install [swiftly](https://github.com/swiftlang/swiftly).
-    Swiftly is a Swift toolchain manager that will make sure that you use the same swift version as written in `.swift-version` file.
-    `brew install swiftly`
-3.  If you want to build shell completion, install rust, bash and fish
-    -   Install Rust using rustup. https://www.rust-lang.org/tools/install
-    -   `brew install bash fish`
-4.  If you want to build man pages, install Ruby >= 3.0. I recommend using [rbenv](https://github.com/rbenv/rbenv).
-    -   `rbenv install 3.3.4` (or whatever 3.x version)
-    -   Install asciidoctor using Ruby `bundler`. `cd AeroSpace && bundler install`
-5.  Install optional `xcbeautify` to make Xcode build logs readable. `brew install xcbeautify`
+Debug executables and resources are in `.build\x86_64-unknown-windows-msvc\debug`. `script/Copy-Runtime.ps1` copies Swift runtime assemblies, manifests and MSVC runtime DLLs beside the executables. Keep these files together when moving a build.
 
-## 2. Create codesign certificate
+Start `AeroSpaceApp.exe` for the server and use `aerospace.exe` for the CLI. For a dedicated configuration:
 
-If you want to run AeroSpace as App Bundle (AeroSpace.app) you need to create self-signed certificate that will be used to codesign AeroSpace.
-Release artifact is built as App Bundle.
-If you only plan to build the debug version of AeroSpace, you can run it from the terminal and custom certificate is not required.
+```powershell
+Start-Process .\.build\x86_64-unknown-windows-msvc\debug\AeroSpaceApp.exe -ArgumentList '--config-path', 'C:\configs\aerospace.toml'
+```
 
-1.  Open `Keychain Access.app`
-2.  Menu -> `Keychain Access` -> `Certificate Assistance` -> `Create a Certificate...`
-    -   Name: `aerospace-codesign-certificate`
-    -   Identity Type: `Self-Signed Root`
-    -   Certificate Type: `Code Signing`
+`--read-only` starts discovery and query support without arranging windows or registering hotkeys. `--manage-process <PID>` restricts discovery to a fixture process and is useful for isolated diagnostics. Only one application instance can manage the same user session.
 
-## 3. Entry point scripts
+## Tests
 
-**Debug build**
--   `build-debug.sh` - Build debug build to `.debug` dir by using SPM. (Xcode is not involved)
--   `test.sh` - Run tests.
--   `swiftformat.sh` - Format the code.
--   `run-debug.sh` - Run AeroSpace.app debug build.
--   `run-cli.sh` - Run `aerospace` in CLI. Arguments are forwarded to `aerospace` binary.
--   `build-docs.sh` - Build the site and man pages to `.site` and `.man` dirs respectively.
--   `build-shell-completion.sh` - Build shell completion to `.shell-completion`.
-    You can test that the completion works properly by sourcing the file `source ./.shell-completion/zsh/_aerospace`
--   `generate.sh` - Regenerate generated project files. `xcode/AeroSpace.xcodeproj` is generated, and some of the source files
-    (the source files have `Generated` suffix in their names).
+```powershell
+.\build.ps1 -Test
+```
 
-**Release build**
--   `build-release.sh` - Build release build to `.release` dir by using Xcode.
--   `install-from-sources.sh` - Build release build from sources and install it as `aerospace-dev` brew cask.
-    This script is "work in progress".
-    Use it on your own risk.
+Swift tests cover command parsing, configuration, tree operations, layouts and monitor/workspace behavior using model fixtures. Windows XCTest discovery requires actor-isolated test methods to be asynchronous.
 
-## IDE
+`WindowsSmoke.exe` creates a dedicated fixture process and windows. It checks native enumeration, geometry, hide/show, hotkey registration, named-pipe command handling, workspace visibility, rejected configuration reloads and watchdog recovery. The server is restricted to the fixture PID. Do not run this test while another AeroSpace instance owns the session.
 
--   You can obviously [open the project in Xcode](#xcode).
--   You can use your editor of choice (Neovim, Vim, Emacs, Sublime, VS Code) by using [sourcekit-lsp LSP](https://github.com/apple/sourcekit-lsp).
-    I only tested it in Neovim
--   AppCode. The initial codebase was written in AppCode and the IDE was pretty solid.
-    But AppCode was unfortunately sunsetted, and it started falling apart.
-    Last time I checked it, it didn't support Swift 5.9 features, and I couldn't make it reliably import the project.
-    RIP
+For changes involving DPI, display removal or application-specific behavior, also check real applications and monitor arrangements. Native smoke tests use ordinary Win32 windows and do not cover every application's sizing constraints.
 
-## Xcode
+## Package
 
-Even if you use LSP and another text editor, Xcode is still useful to attach debugger (though you can use `lldb` in CLI).
+```powershell
+.\build-release.ps1
+```
 
-1.  To open the project in Xcode: File -> Open -> Choose `Package.swift` file instead of `xcode/AeroSpace.xcodeproj`.
-    It's better to open `Package.swift`, because SPM project is more lightweight.
-    `xcode/AeroSpace.xcodeproj` is only used in `*release*.sh` build scripts.
-2.  After you opened the project in Xcode.
-    Edit Scheme... -> Options -> Console -> Choose `Terminal`.
-    This way Accessibility permission will be requested from Terminal.
-    If you don't change Console to `Terminal`, Accessibility permission will be requested on every rebuild, because the debug binary is unsigned.
+The release script builds the app and CLI, copies resources and runtimes, checks CLI startup, and writes `.release\AeroSpace-Windows-x64.zip`. Keep dependency license notices in the package. The Windows GitHub Actions workflow runs build/tests and uploads this ZIP as a build artifact.
 
-## Tips
+## Changes
 
-- Use built-in "Accessibility Inspector.app" to inspect accessibility properties of windows
-- Use [DeskPad](https://github.com/Stengo/DeskPad) or [BetterDisplay 2](https://github.com/waydabber/BetterDisplay) to emulate several monitors
-- You can use `script/clean-project.sh` to clean the project when something goes wrong.
+Implement native platform calls in `Sources/NativeWindows`. Keep layout and workspace rules in the Swift model. Add tests when changes affect persistent state, visibility recovery, parser compatibility or command behavior. Update the command reference and built-in help together; the former macOS shell generation scripts are no longer part of the Windows build.

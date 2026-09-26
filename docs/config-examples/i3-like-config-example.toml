@@ -12,13 +12,9 @@ persistent-workspaces = []
 enable-normalization-flatten-containers = false
 enable-normalization-opposite-orientation-for-nested-containers = false
 
-# Mouse follows focus when focused monitor changes
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-
+# Commands execute in Windows PowerShell.
 [mode.main.binding]
-    # See: https://nikitabobko.github.io/AeroSpace/goodies#open-a-new-window-with-applescript
-    alt-enter = '''exec-and-forget osascript -e \
-    'tell application "Terminal" to tell (do script) to activate' '''
+    alt-enter = 'exec-and-forget Start-Process powershell.exe'
 
     # i3 wraps focus by default
     alt-j =         'focus --boundaries-action wrap-around-the-workspace left'

@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import Common
 
 struct ListWindowsCommand: Command {
@@ -36,7 +36,7 @@ struct ListWindowsCommand: Command {
                 windows = windows.filter { $0.app.pid == pid }
             }
             if let appId = args.filteringOptions.appIdFilter {
-                windows = windows.filter { $0.app.rawAppBundleId == appId }
+                windows = windows.filter { $0.app.rawAppId == appId }
             }
         }
 

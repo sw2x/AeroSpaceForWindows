@@ -5,7 +5,6 @@ public struct ListAppsCmdArgs: CmdArgs {
         kind: .listApps,
         help: list_apps_help_generated,
         flags: [
-            "--macos-native-hidden": boolFlag(\.macosHidden),
 
             // Formatting flags
             "--format": formatParser(\._format, for: .app),
@@ -19,7 +18,6 @@ public struct ListAppsCmdArgs: CmdArgs {
         ],
     )
 
-    public var macosHidden: Bool?
     public var _format: [InterToken<InterVar>] = []
     public var outputOnlyCount: Bool = false
     public var json: Bool = false
@@ -30,7 +28,7 @@ extension ListAppsCmdArgs {
         _format.isEmpty
             ? [
                 .interVar(.formatVar(.app(.appPid))), .interVar(.plainInterVar(.rightPadding)), .literal(" | "),
-                .interVar(.formatVar(.app(.appBundleId))), .interVar(.plainInterVar(.rightPadding)), .literal(" | "),
+                .interVar(.formatVar(.app(.appId))), .interVar(.plainInterVar(.rightPadding)), .literal(" | "),
                 .interVar(.formatVar(.app(.appName))),
             ]
             : _format

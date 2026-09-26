@@ -5,7 +5,7 @@ import XCTest
 final class TreeNodeTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testChildParentCyclicReferenceMemoryLeak() {
+    func testChildParentCyclicReferenceMemoryLeak() async {
         let workspace = Workspace.get(byName: name) // Don't cache root node
         let window = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
 
@@ -14,7 +14,7 @@ final class TreeNodeTest: XCTestCase {
         XCTAssertTrue(window.parent == nil)
     }
 
-    func testIsEffectivelyEmpty() {
+    func testIsEffectivelyEmpty() async {
         let workspace = Workspace.get(byName: name)
 
         XCTAssertTrue(workspace.isEffectivelyEmpty)
@@ -29,7 +29,7 @@ final class TreeNodeTest: XCTestCase {
         XCTAssertTrue(!workspace.isEffectivelyEmpty)
     }
 
-    func testNormalizeContainers_dontRemoveRoot() {
+    func testNormalizeContainers_dontRemoveRoot() async {
         let workspace = Workspace.get(byName: name)
         weak let root = workspace.rootTilingContainer
         func test() {
@@ -44,7 +44,7 @@ final class TreeNodeTest: XCTestCase {
         test()
     }
 
-    func testNormalizeContainers_singleWindowChild() {
+    func testNormalizeContainers_singleWindowChild() async {
         config.enableNormalizationFlattenContainers = true
         let workspace = Workspace.get(byName: name)
         workspace.rootTilingContainer.apply {
@@ -60,7 +60,7 @@ final class TreeNodeTest: XCTestCase {
         )
     }
 
-    func testNormalizeContainers_removeEffectivelyEmpty() {
+    func testNormalizeContainers_removeEffectivelyEmpty() async {
         let workspace = Workspace.get(byName: name)
         workspace.rootTilingContainer.apply {
             TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {
@@ -72,7 +72,7 @@ final class TreeNodeTest: XCTestCase {
         assertEquals(workspace.rootTilingContainer.children.count, 0)
     }
 
-    func testNormalizeContainers_flattenContainers() {
+    func testNormalizeContainers_flattenContainers() async {
         let workspace = Workspace.get(byName: name) // Don't cache root node
         workspace.rootTilingContainer.apply {
             TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {

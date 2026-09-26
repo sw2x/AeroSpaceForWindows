@@ -11,7 +11,7 @@ include::util/man-attributes.adoc[]
 // tag::synopsis[]
 aerospace list-windows [-h|--help] (--workspace <workspace>...|--monitor <monitor>...)
                        [--monitor <monitor>...] [--workspace <workspace>...]
-                       [--pid <pid>] [--app-bundle-id <app-bundle-id>] [--format <output-format>]
+                       [--pid <pid>] [--app-id <app-id>] [--format <output-format>]
                        [--count] [--json]
 aerospace list-windows [-h|--help] --all [--format <output-format>] [--count] [--json]
 aerospace list-windows [-h|--help] --focused [--format <output-format>] [--count] [--json]
@@ -50,10 +50,10 @@ include::util/monitor-option.adoc[]
 
 --pid <pid>:: Filter results to only print windows that belong to the Application with specified `<pid>`
 
---app-bundle-id <app-bundle-id>::
-Filter results to only print windows that belong to the Application with specified https://developer.apple.com/documentation/appstoreconnectapi/bundle_ids[Bundle ID]
+--app-id <app-id>::
+Filter results by the application executable filename, such as `notepad.exe`
 +
-Deprecated (but still supported) flag name: `--app-id`
+Application IDs use Windows executable filenames.
 
 --format <output-format>:: Specify output format. See "Output Format" section for more details.
 Incompatible with `--count`
@@ -82,11 +82,11 @@ The following variables can be used inside `<output-format>`:
 %{window-layout}:: String. An alias for `%{window-parent-container-layout}`
 %{window-parent-container-layout}:: String. The layout (`v_tiles`, `h_tiles`, `v_accordion`, `h_accordion`, `floating`) of the window's parent container.
 
-%{app-bundle-id}:: String. Application unique identifier. https://developer.apple.com/documentation/appstoreconnectapi/bundle_ids[Bundle ID]
+%{app-id}:: String. Application executable filename in lowercase, such as `notepad.exe`
 %{app-name}:: String. Application name
-%{app-pid}:: Number. https://en.wikipedia.org/wiki/Process_identifier[UNIX process identifier]
+%{app-pid}:: Number. Windows process identifier
 %{app-exec-path}:: String. Application executable path
-%{app-bundle-path}:: String. Application bundle path
+%{app-executable-directory}:: String. Directory containing the application executable
 
 %{workspace}:: String. Name of the belonging workspace
 %{workspace-is-focused}:: Boolean. `true` if the workspace has focus
@@ -94,7 +94,7 @@ The following variables can be used inside `<output-format>`:
 %{workspace-root-container-layout}:: String. The layout (`v_tiles`, `h_tiles`, `v_accordion`, `h_accordion`) of the workspace the window belongs to.
 
 %{monitor-id}:: 1-based Number. Sequential number of the belonging monitor.
-%{monitor-appkit-nsscreen-screens-id}:: 1-based index of the belonging monitor in `NSScreen.screens` array. Useful for integration with other tools that might be using `NSScreen.screens` ordering (like sketchybar).
+%{monitor-native-index}:: 1-based index in the native Windows monitor enumeration. This can differ from the layout order used by monitor IDs.
 %{monitor-name}:: String. Name of the belonging monitor
 %{monitor-is-main}:: Boolean. `true` if the monitor is main.
 

@@ -1,5 +1,5 @@
-// FILE IS GENERATED FROM docs/aerospace-*.adoc files
-// TO REGENERATE THE FILE RUN generate.sh
+// Command usage for the Windows application
+// Keep synchronized with docs/aerospace-*.adoc and the command parsers.
 
 let balance_sizes_help_generated = """
     USAGE: balance-sizes [-h|--help] [--workspace <workspace>]
@@ -16,9 +16,6 @@ let config_help_generated = """
        OR: config [-h|--help] --all-keys
        OR: config [-h|--help] --config-path
     """
-let debug_windows_help_generated = """
-    USAGE: debug-windows [-h|--help] [--window-id <window-id>]
-    """
 let echo_help_generated = """
     USAGE: echo [-h|--help] [--stderr] [--window-id <window-id>] -- <string>...
     """
@@ -31,7 +28,7 @@ let eval_help_generated = """
     USAGE: eval [-h|--help] [--stdin] [--] <aerospace-shell-expr>
     """
 let exec_and_forget_help_generated = """
-    USAGE: exec-and-forget <bash-script>
+    USAGE: exec-and-forget <powershell-script>
     """
 let false_help_generated = """
     USAGE: false [-h|--help]
@@ -50,7 +47,7 @@ let focus_monitor_help_generated = """
 let focus_help_generated = """
     USAGE: focus [-h|--help] [--ignore-floating] [--wrap-around]
                  [--boundaries <boundary>] [--boundaries-action <action>]
-                 [--fail-if-fullscreen] [--fail-if-macos-native-fullscreen]
+                 [--fail-if-fullscreen] [--fail-if-native-fullscreen]
                  (left|down|up|right)
        OR: focus [-h|--help] [--ignore-floating] [--wrap-around]
                  [--boundaries <boundary>] [--boundaries-action <action>]
@@ -72,7 +69,7 @@ let layout_help_generated = """
                   (<target-layout>)...
     """
 let list_apps_help_generated = """
-    USAGE: list-apps [-h|--help] [--macos-native-hidden [no]] [--format <output-format>] [--count] [--json]
+    USAGE: list-apps [-h|--help] [--format <output-format>] [--count] [--json]
     """
 let list_exec_env_vars_help_generated = """
     USAGE: list-exec-env-vars [-h|--help]
@@ -86,7 +83,7 @@ let list_monitors_help_generated = """
 let list_windows_help_generated = """
     USAGE: list-windows [-h|--help] (--workspace <workspace>...|--monitor <monitor>...)
                         [--monitor <monitor>...] [--workspace <workspace>...]
-                        [--pid <pid>] [--app-bundle-id <app-bundle-id>] [--format <output-format>]
+                        [--pid <pid>] [--app-id <app-id>] [--format <output-format>]
                         [--count] [--json]
        OR: list-windows [-h|--help] --all [--format <output-format>] [--count] [--json]
        OR: list-windows [-h|--help] --focused [--format <output-format>] [--count] [--json]
@@ -96,19 +93,8 @@ let list_workspaces_help_generated = """
        OR: list-workspaces [-h|--help] --all [--format <output-format>] [--count] [--json]
        OR: list-workspaces [-h|--help] --focused [--format <output-format>] [--count] [--json]
     """
-let macos_native_fullscreen_help_generated = """
-    USAGE: macos-native-fullscreen [-h|--help] [--window-id <window-id>]
-       OR: macos-native-fullscreen [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
-       OR: macos-native-fullscreen [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
-    """
-let macos_native_minimize_help_generated = """
-    USAGE: macos-native-minimize [-h|--help] [--window-id <window-id>]
-    """
 let mode_help_generated = """
     USAGE: mode [-h|--help] [--] <binding-mode>
-    """
-let move_mouse_help_generated = """
-    USAGE: move-mouse [-h|--help] [--fail-if-noop] <mouse-position>
     """
 let move_node_to_monitor_help_generated = """
     USAGE: move-node-to-monitor [-h|--help] [--window-id <window-id>] [--focus-follows-window]
@@ -131,7 +117,7 @@ let move_workspace_to_monitor_help_generated = """
 let move_help_generated = """
     USAGE: move [-h|--help] [--window-id <window-id>] [--boundaries <boundary>]
                 [--boundaries-action <boundary-action>] [--fail-if-fullscreen]
-                [--fail-if-macos-native-fullscreen] (left|down|up|right)
+                [--fail-if-native-fullscreen] (left|down|up|right)
     """
 let reload_config_help_generated = """
     USAGE: reload-config [-h|--help] [--no-gui] [--dry-run] [--warnings-as-errors]
@@ -145,9 +131,6 @@ let run_callback_help_generated = """
     """
 let split_help_generated = """
     USAGE: split [-h|--help] [--window-id <window-id>] (horizontal|vertical|opposite)
-    """
-let subscribe_help_generated = """
-    USAGE: subscribe [-h|--help] [--all] [--no-send-initial] [<event>...]
     """
 let summon_workspace_help_generated = """
     USAGE: summon-workspace [-h|--help] [--fail-if-noop] [--] <workspace>
@@ -169,11 +152,6 @@ let trigger_binding_help_generated = """
     """
 let true_help_generated = """
     USAGE: true [-h|--help]
-    """
-let volume_help_generated = """
-    USAGE: volume [-h|--help] (up|down) [--no-gui]
-       OR: volume [-h|--help] (mute-toggle|mute-off|mute-on) [--no-gui]
-       OR: volume [-h|--help] set <number> [--no-gui]
     """
 let workspace_back_and_forth_help_generated = """
     USAGE: workspace-back-and-forth [-h|--help]

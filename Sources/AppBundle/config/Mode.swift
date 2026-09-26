@@ -1,5 +1,5 @@
 import Common
-import HotKey
+
 
 struct Mode: ConvenienceMutable, Equatable, Sendable {
     var bindings: [String: HotkeyBinding]

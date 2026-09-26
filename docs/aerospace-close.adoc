@@ -9,7 +9,7 @@ include::util/man-attributes.adoc[]
 == Synopsis
 [verse]
 // tag::synopsis[]
-aerospace close [-h|--help] [--quit-if-last-window] [--window-id <window-id>]
+aerospace close [-h|--help] [--window-id <window-id>]
 
 // end::synopsis[]
 
@@ -19,14 +19,12 @@ aerospace close [-h|--help] [--quit-if-last-window] [--window-id <window-id>]
 // tag::body[]
 {manpurpose}
 
-Normally, you don’t need to use this command, because macOS offers its own `cmd+w` binding.
-You might want to use the command from CLI for scripting purposes
+The command sends a Windows close request to the selected window. The application may ask to save changes.
 
 // =========================================================== Options
 include::./util/conditional-options-header.adoc[]
 
 -h, --help:: Print help
---quit-if-last-window:: Quit the app instead of closing if it's the last window of the app
 
 --window-id <window-id>::
 include::./util/window-id-flag-desc.adoc[]

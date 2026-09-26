@@ -6,13 +6,13 @@ import XCTest
 final class TriggerBindingCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         testParseSingleCommandSucc("trigger-binding foo --mode main", TriggerBindingCmdArgs(rawArgs: []).copy(\.binding, .initialized("foo")).copy(\._mode, "main"))
         testParseCommandFail("trigger-binding foo", msg: "--mode flag is mandatory", exitCode: 2)
         testParseCommandFail("trigger-binding", msg: "ERROR: Argument \'<binding>\' is mandatory", exitCode: 2)
     }
 
-    func testParseDashDash() {
+    func testParseDashDash() async {
         testParseSingleCommandSucc(
             "trigger-binding --mode main -- foo",
             TriggerBindingCmdArgs(rawArgs: []).copy(\.binding, .initialized("foo")).copy(\._mode, "main"),

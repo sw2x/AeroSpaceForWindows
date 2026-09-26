@@ -32,7 +32,7 @@ If not supplied, stdin is ignored.
 include::./util/conditional-arguments-header.adoc[]
 
 <aerospace-shell-expr>:: This argument is AeroSpace's shell expression.
-See https://nikitabobko.github.io/AeroSpace/guide#shell for more info.
+See xref:guide.adoc#shell for more info.
 
 // =========================================================== Examples
 include::util/conditional-examples-header.adoc[]

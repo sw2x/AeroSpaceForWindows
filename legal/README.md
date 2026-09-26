@@ -1,27 +1,14 @@
-# LICENSE
+# License notices
 
-The AeroSpace itself is licensed under MIT. See [LICENSE](./LICENSE.txt) for the full license text.
+AeroSpace is distributed under the [MIT license](LICENSE.txt). The original Nikita Bobko copyright and attribution are retained in this Windows port.
 
-## Bundled dependencies and materials
+## Current dependencies
 
-AeroSpace bundles the following dependencies and uses the following materials:
+- **TOMLDecoder** parses TOML. See [MIT license](third-party-license/LICENSE-TOMLDecoder.txt).
+- **swift-collections** provides ordered collections. See [Apache 2.0 license](third-party-license/LICENSE-swift-collections.txt).
+- **Swift runtime** libraries are copied beside the executables for ZIP distribution. See the [Swift license](third-party-license/LICENSE-Swift.txt), [Foundation license](third-party-license/LICENSE-Foundation.txt), [libdispatch license](third-party-license/LICENSE-libdispatch.txt), [BlocksRuntime license](third-party-license/LICENSE-BlocksRuntime.txt), [FoundationICU license](third-party-license/LICENSE-FoundationICU.txt) and [ICU notices](third-party-license/LICENSE-ICU.txt), retrieved from their official source repositories.
+- **Microsoft Visual C++ runtime** DLLs are included from the Visual Studio redistributable directory by the packaging script.
 
-**HotKey**.
-[HotKey GitHub link](https://github.com/soffes/HotKey).
-[HotKey MIT license](./third-party-license/LICENSE-HotKey.txt).
-HotKey is used as a more convenient wrapper around macOS Carbon API to listen for global shortcuts.
+## Historical notices
 
-**TOMLDecoder**.
-[TOMLDecoder GitHub link](https://github.com/dduan/TOMLDecoder).
-[TOMLDecoder MIT license](./third-party-license/LICENSE-TOMLDecoder.txt).
-TOMLDecoder is used as TOML parsing library.
-
-**swift-collections**.
-[swift-collections GitHub link](https://github.com/apple/swift-collections).
-[swift-collections Apache 2.0 license](./third-party-license/LICENSE-swift-collections.txt).
-swift-collections is used for more advanced Swift collections.
-
-**ISSoundAdditions**
-[ISSoundAdditions GitHub link](https://github.com/InerziaSoft/ISSoundAdditions).
-[ISSoundAdditions MIT license](./third-party-license/LICENSE-ISSoundAdditions.txt).
-ISSoundAdditions is used as a convenient API to change system volume.
+The original repository used HotKey for macOS hotkeys, ISSoundAdditions for audio controls and tomlplusplus in older TOML parsing code. These dependencies are not linked by the Windows package. Their license files remain in `third-party-license` to preserve the repository's historical notices.

@@ -6,7 +6,7 @@ import XCTest
 final class ListWindowsTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         assertEquals(parseCommand("list-windows --pid 1").errorOrNil, "Mandatory option is not specified (--focused|--all|--monitor|--workspace)")
         assertNil(parseCommand("list-windows --workspace M --pid 1").errorOrNil)
         assertEquals(parseCommand("list-windows --pid 1 --focused").errorOrNil, "--focused conflicts with other \"filtering\" flags")
@@ -33,7 +33,7 @@ final class ListWindowsTest: XCTestCase {
         assertNil(parseCommand("list-windows --all --format '%{window-title}' --json").errorOrNil)
     }
 
-    func testInterpolationVariablesConsistency() {
+    func testInterpolationVariablesConsistency() async {
         for kind in AeroObjKind.allCases {
             switch kind {
                 case .window:
@@ -48,7 +48,7 @@ final class ListWindowsTest: XCTestCase {
         }
     }
 
-    func testFormat() {
+    func testFormat() async {
         Workspace.get(byName: name).rootTilingContainer.apply {
             let windows = [
                 AeroObj.window(.forTest(window: TestWindow.new(id: 2, parent: $0), title: "non-empty")),
@@ -175,11 +175,11 @@ final class ListWindowsTest: XCTestCase {
 
     func testRunFilterByAppBundleId() async {
         TestWindow.new(id: 1, parent: Workspace.get(byName: "a").rootTilingContainer)
-        let matching = await parseCommand("list-windows --monitor all --app-bundle-id bobko.AeroSpace.test-app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let matching = await parseCommand("list-windows --monitor all --app-id bobko.AeroSpace.test-app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(matching.exitCode.rawValue, 0)
         assertEquals(matching.stdout, ["1"])
 
-        let mismatching = await parseCommand("list-windows --monitor all --app-bundle-id com.unknown.app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let mismatching = await parseCommand("list-windows --monitor all --app-id com.unknown.app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(mismatching.exitCode.rawValue, 0)
         assertEquals(mismatching.stdout, [])
     }

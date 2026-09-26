@@ -23,7 +23,7 @@ import XCTest
 final class FocusCommandTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
-    func testParse() {
+    func testParse() async {
         XCTAssertTrue(parseCommand("focus --boundaries left").errorOrNil?.contains("Possible values") == true)
         var expected = FocusCmdArgs(rawArgs: [], cardinalOrDfsDirection: .direction(.left))
         expected.rawBoundaries = .workspace
@@ -52,13 +52,13 @@ final class FocusCommandTest: XCTestCase {
         )
         assertEquals(
             parseCommand("focus dfs-next --fail-if-fullscreen").errorOrNil,
-            "--fail-if-fullscreen/--fail-if-macos-native-fullscreen require using (left|down|up|right) argument",
+            "--fail-if-fullscreen/--fail-if-native-fullscreen require using (left|down|up|right) argument",
         )
         assertEquals(
-            parseCommand("focus --fail-if-macos-native-fullscreen --window-id 42").errorOrNil,
+            parseCommand("focus --fail-if-native-fullscreen --window-id 42").errorOrNil,
             "--window-id is incompatible with other options",
         )
-        assertNil(parseCommand("focus --fail-if-fullscreen --fail-if-macos-native-fullscreen left").errorOrNil)
+        assertNil(parseCommand("focus --fail-if-fullscreen --fail-if-native-fullscreen left").errorOrNil)
     }
 
     func testFailIfFullscreen() async {
@@ -78,12 +78,12 @@ final class FocusCommandTest: XCTestCase {
         Workspace.get(byName: name).rootTilingContainer.apply {
             let window = TestWindow.new(id: 1, parent: $0)
             assertEquals(window.focusWindow(), true)
-            window.isMacosFullscreenForTest = true
+            window.isNativeFullscreenForTest = true
 
             TestWindow.new(id: 2, parent: $0)
         }
 
-        let result = await parseCommand("focus --fail-if-macos-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let result = await parseCommand("focus --fail-if-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(result.exitCode.rawValue, 2)
         assertEquals(focus.windowOrNil?.windowId, 1)
     }
@@ -94,12 +94,12 @@ final class FocusCommandTest: XCTestCase {
             TestWindow.new(id: 2, parent: $0)
         }
 
-        let result = await parseCommand("focus --fail-if-fullscreen --fail-if-macos-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        let result = await parseCommand("focus --fail-if-fullscreen --fail-if-native-fullscreen right").cmdOrDie.run(.defaultEnv, .emptyStdin)
         assertEquals(result.exitCode.rawValue, 0)
         assertEquals(focus.windowOrNil?.windowId, 2)
     }
 
-    func testFocus() {
+    func testFocus() async {
         assertEquals(focus.windowOrNil, nil)
         Workspace.get(byName: name).rootTilingContainer.apply {
             TestWindow.new(id: 1, parent: $0)
