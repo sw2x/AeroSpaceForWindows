@@ -85,7 +85,7 @@ import NativeWindows
 }
 
 @MainActor func runLightSession<T>(_ event: RefreshSessionEvent, _: RunSessionGuard,
-    body: @MainActor () async throws -> T) async throws -> T {
+    layoutWorkspaces shouldLayout: Bool = true, body: @MainActor () async throws -> T) async throws -> T {
     await acquireSession()
     defer { releaseSession() }
     let intent = NativeFocusIntent()
@@ -98,7 +98,7 @@ import NativeWindows
             do {
                 let result = try await body()
                 await refreshModel_nonCancellable()
-                try await layoutWorkspaces()
+                if shouldLayout { try await layoutWorkspaces() }
                 if !serverArgs.isReadOnly, TrayMenuModel.shared.isEnabled,
                    intent.requested || previous != focus,
                    let window = focus.windowOrNil, !window.requestNativeFocus() {
@@ -108,7 +108,7 @@ import NativeWindows
                 return result
             } catch {
                 _ = setFocus(to: previous)
-                try? await layoutWorkspaces()
+                if shouldLayout { try? await layoutWorkspaces() }
                 throw error
             }
         }

@@ -387,7 +387,10 @@ int32_t aw_hide(uint64_t handle) {
         if (ok) showRequested[i] = 0;
         LeaveCriticalSection(&hiddenLock); return ok;
     }
-    if (!IsWindowVisible(hwnd) || IsIconic(hwnd) || hiddenCount == MAX_HIDDEN) { LeaveCriticalSection(&hiddenLock); return 0; }
+    /* The target may have hidden itself after Swift last inspected it. There
+       is nothing for this manager to hide or recover in that case. */
+    if (!IsWindowVisible(hwnd)) { LeaveCriticalSection(&hiddenLock); return 1; }
+    if (IsIconic(hwnd) || hiddenCount == MAX_HIDDEN) { LeaveCriticalSection(&hiddenLock); return 0; }
     DWORD pid=0; GetWindowThreadProcessId(hwnd,&pid);
     HiddenEntry entry={handle,creationTime(pid),pid,GetCurrentProcessId()};
     if (!entry.creation || !SetPropW(hwnd,HIDDEN_PROPERTY,(HANDLE)(uintptr_t)entry.owner)) { LeaveCriticalSection(&hiddenLock); return 0; }

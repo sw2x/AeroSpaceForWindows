@@ -35,7 +35,11 @@ func startPipeServer() {
                 return ServerAnswer(exitCode: 2, stderr: error, serverVersionAndHash: version)
             }
             do {
-                let result = try await runLightSession(.socketServer(command.args), token) {
+                let isQuery: Bool = switch command.info.kind {
+                    case .listApps, .listExecEnvVars, .listModes, .listMonitors, .listWindows, .listWorkspaces: true
+                    default: false
+                }
+                let result = try await runLightSession(.socketServer(command.args), token, layoutWorkspaces: !isQuery) {
                     await command.run(CmdEnv(windowId: request.windowId.flattenOptional(), workspaceName: request.workspace.flattenOptional()), CmdStdin(request.stdin))
                 }
                 return ServerAnswer(exitCode: result.exitCode.rawValue, stdout: result.stdout.joined(separator: "\n"),

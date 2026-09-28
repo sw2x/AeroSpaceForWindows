@@ -81,7 +81,13 @@ final class DesktopWindow: Window {
         if visible {
             guard aw_show(handle) != 0 else { throw PlatformError("Failed to show window \(windowId)") }
         } else if info?.minimized == 0 && !isHiddenInCorner {
-            guard aw_hide(handle) != 0 else { throw PlatformError("Failed to hide window \(windowId); workspace change aborted") }
+            guard aw_hide(handle) != 0 else {
+                let error = aw_last_error()
+                let reason = error == 5
+                    ? "Windows denied access to \(desktopApp.name ?? "this app") (error 5). Run the app without administrator privileges or run AeroSpace at the same integrity level."
+                    : "Windows error \(error)."
+                throw PlatformError("Failed to hide window \(windowId): \(reason) Workspace change aborted")
+            }
         }
     }
 }
