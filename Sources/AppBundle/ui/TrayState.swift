@@ -8,7 +8,10 @@ import NativeWindows
     var lastReloadConfigContainedWarnings = false
 }
 @MainActor func updateTrayText() {
-    aw_tray_text(TrayMenuModel.shared.isEnabled ? "AeroSpace — \(focus.workspace.name)" : "AeroSpace — disabled", TrayMenuModel.shared.isEnabled ? 1 : 0)
+    let enabled = TrayMenuModel.shared.isEnabled
+    let workspaceName = enabled ? focus.workspace.name : ""
+    aw_tray_text(enabled ? "AeroSpace — \(workspaceName)" : "AeroSpace — disabled",
+                 workspaceName, enabled ? 1 : 0)
 }
 // Event subscriptions are reserved for a later release; callbacks still run locally.
 @MainActor func broadcastEvent(_ event: ServerEvent) {}

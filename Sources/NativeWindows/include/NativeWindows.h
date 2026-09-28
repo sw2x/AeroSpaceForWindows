@@ -44,7 +44,7 @@ int32_t aw_is_hidden(uint64_t handle);
 void aw_restore_all(void);
 int32_t aw_register_hotkey(int32_t id, uint32_t modifiers, uint32_t key);
 void aw_unregister_hotkey(int32_t id);
-void aw_tray_text(const char *text, int32_t enabled);
+void aw_tray_text(const char *text, const char *workspace, int32_t enabled);
 void aw_message(const char *title, const char *text);
 uint32_t aw_pid(void);
 uint32_t aw_last_error(void);

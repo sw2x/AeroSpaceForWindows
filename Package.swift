@@ -14,7 +14,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "NativeWindows", publicHeadersPath: "include", linkerSettings: [
-            .linkedLibrary("user32"), .linkedLibrary("dwmapi"), .linkedLibrary("shell32"),
+            .linkedLibrary("user32"), .linkedLibrary("gdi32"), .linkedLibrary("dwmapi"), .linkedLibrary("shell32"),
             .linkedLibrary("ole32"), .linkedLibrary("advapi32"), .linkedLibrary("uuid"),
         ]),
         .target(name: "Common", dependencies: ["NativeWindows", .product(name: "Collections", package: "swift-collections")]),

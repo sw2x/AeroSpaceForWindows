@@ -21,6 +21,8 @@ Start-Process .\AeroSpaceApp.exe
 
 The app and CLI have different filenames because Windows filenames are case-insensitive. The ZIP includes the required Swift and Microsoft C++ runtimes; you do not need to install the Swift development tools to use it.
 
+The AeroSpace taskbar button and system tray icon show the first one or two characters of the focused workspace name, such as `B`, `C`, `N`, or `1`. The button title and tray tooltip show the full name. Both icons show a dash when AeroSpace is disabled. To show text labels on taskbar buttons, set Windows' taskbar button combining option to Never.
+
 AeroSpace workspaces are independent of Windows virtual desktops. Switching workspaces hides the windows on the previous workspace and shows the windows on the destination workspace. Each monitor has its own active workspace. Disabling or quitting AeroSpace restores the windows it has hidden. A separate watchdog process also restores them if the app exits unexpectedly. Recovery information is stored in `%LOCALAPPDATA%\AeroSpace`.
 
 ## Configuration

@@ -20,6 +20,7 @@
 #define HIDDEN_PROPERTY L"AeroSpace.Windows.HiddenOwner"
 typedef struct { uint64_t hwnd, creation; uint32_t pid, owner; } HiddenEntry;
 typedef struct { int id; UINT modifiers, key; } HotkeyRequest;
+typedef struct { const wchar_t *tooltip, *workspace; } TrayTextRequest;
 static HiddenEntry hidden[MAX_HIDDEN];
 /* Keep recovery coverage after an asynchronous show. A previously queued hide
    can still run while the target UI thread is blocked. Entries are discarded
@@ -31,10 +32,12 @@ static int lockInitialized;
 static wchar_t journalPath[32768], lockPath[32768], pipeName[1024];
 static HANDLE instanceLock;
 static HWND messageWindow;
+static HWND taskbarWindow;
 static volatile LONG ready, stopping;
 static AWEventCallback eventCallback;
 static NOTIFYICONDATAW tray;
 static int trayEnabled = 1;
+static HICON workspaceIcon;
 static const CLSID desktopManagerClass = {0xaa509086,0x5ca9,0x4c25,{0x8f,0x95,0x58,0x9d,0x3c,0x07,0xb4,0x8a}};
 static const IID desktopManagerInterface = {0xa5cd92ff,0x29be,0x454c,{0x8d,0x04,0xd8,0x28,0x79,0xfb,0x3f,0x1b}};
 static SECURITY_ATTRIBUTES *userSecurity(SECURITY_ATTRIBUTES *attributes);
@@ -429,19 +432,88 @@ static void CALLBACK windowEvent(HWINEVENTHOOK hook,DWORD event,HWND hwnd,LONG o
     emit(type,(uint64_t)(uintptr_t)hwnd);
 }
 static void addTray(void) { Shell_NotifyIconW(NIM_ADD,&tray); tray.uVersion=NOTIFYICON_VERSION_4; Shell_NotifyIconW(NIM_SETVERSION,&tray); }
+static HICON makeWorkspaceIcon(const wchar_t *name, int enabled) {
+    const int size = 32;
+    HDC screen = GetDC(NULL);
+    if (!screen) return NULL;
+    HDC dc = CreateCompatibleDC(screen);
+    HBITMAP color = CreateCompatibleBitmap(screen,size,size);
+    HBITMAP mask = CreateBitmap(size,size,1,1,NULL);
+    ReleaseDC(NULL,screen);
+    if (!dc || !color || !mask) {
+        if (dc) DeleteDC(dc);
+        if (color) DeleteObject(color);
+        if (mask) DeleteObject(mask);
+        return NULL;
+    }
+    HGDIOBJ previousBitmap = SelectObject(dc,mask);
+    PatBlt(dc,0,0,size,size,BLACKNESS);
+    SelectObject(dc,color);
+    HBRUSH background = CreateSolidBrush(enabled ? RGB(35,88,174) : RGB(90,90,90));
+    RECT bounds = {0,0,size,size};
+    FillRect(dc,&bounds,background);
+    DeleteObject(background);
+    wchar_t label[3] = {0};
+    if (enabled && name && name[0]) {
+        label[0] = name[0];
+        if (name[1]) label[1] = name[1];
+    } else {
+        label[0] = enabled ? L'?' : L'\x2014';
+    }
+    HFONT font = CreateFontW(label[1] ? -21 : -27,0,0,0,FW_BOLD,FALSE,FALSE,FALSE,
+                             DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,
+                             ANTIALIASED_QUALITY,DEFAULT_PITCH,L"Segoe UI");
+    HGDIOBJ previousFont = font ? SelectObject(dc,font) : NULL;
+    SetBkMode(dc,TRANSPARENT);
+    SetTextColor(dc,RGB(255,255,255));
+    DrawTextW(dc,label,-1,&bounds,DT_CENTER|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);
+    if (previousFont) SelectObject(dc,previousFont);
+    if (font) DeleteObject(font);
+    SelectObject(dc,previousBitmap);
+    DeleteDC(dc);
+    ICONINFO info = {0};
+    info.fIcon = TRUE;
+    info.hbmMask = mask;
+    info.hbmColor = color;
+    HICON icon = CreateIconIndirect(&info);
+    DeleteObject(mask);
+    DeleteObject(color);
+    return icon;
+}
 static LRESULT CALLBACK windowProcedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     static UINT taskbarCreated;
     if (!taskbarCreated) taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");
-    if (msg==taskbarCreated) { addTray(); return 0; }
+    if (msg==taskbarCreated && hwnd==messageWindow) { addTray(); return 0; }
+    if (hwnd == taskbarWindow) {
+        if (msg == WM_SYSCOMMAND && (wp & 0xfff0) == SC_RESTORE) return 0;
+        if (msg == WM_CLOSE) { emit(7,0); return 0; }
+    }
     switch (msg) {
         case WM_AW_REGISTER: { HotkeyRequest *r=(HotkeyRequest*)lp; return RegisterHotKey(hwnd,r->id,r->modifiers|MOD_NOREPEAT,r->key); }
         case WM_AW_UNREGISTER: return UnregisterHotKey(hwnd,(int)wp);
         case WM_HOTKEY: emit(3,(uint64_t)wp); return 0;
         case WM_DISPLAYCHANGE: case WM_SETTINGCHANGE: emit(4,0); return 0;
-        case WM_AW_TEXT:
+        case WM_AW_TEXT: {
+            const TrayTextRequest *request = (const TrayTextRequest*)lp;
             trayEnabled=(int)wp;
-            wcsncpy_s(tray.szTip,128,(const wchar_t*)lp,_TRUNCATE);
-            Shell_NotifyIconW(NIM_MODIFY,&tray); return 0;
+            wcsncpy_s(tray.szTip,128,request->tooltip,_TRUNCATE);
+            HICON icon = makeWorkspaceIcon(request->workspace,trayEnabled);
+            if (icon) {
+                HICON previous = workspaceIcon;
+                tray.hIcon = workspaceIcon = icon;
+                if (taskbarWindow) {
+                    SetWindowTextW(taskbarWindow,request->tooltip);
+                    SendMessageW(taskbarWindow,WM_SETICON,ICON_SMALL,(LPARAM)icon);
+                    SendMessageW(taskbarWindow,WM_SETICON,ICON_BIG,(LPARAM)icon);
+                }
+                Shell_NotifyIconW(NIM_MODIFY,&tray);
+                if (previous) DestroyIcon(previous);
+            } else {
+                if (taskbarWindow) SetWindowTextW(taskbarWindow,request->tooltip);
+                Shell_NotifyIconW(NIM_MODIFY,&tray);
+            }
+            return 0;
+        }
         case WM_AW_TRAY:
             if (LOWORD(lp)==WM_CONTEXTMENU || LOWORD(lp)==WM_RBUTTONUP) {
                 HMENU menu=CreatePopupMenu();
@@ -464,6 +536,9 @@ void aw_run_loop(AWEventCallback callback) {
     RegisterClassW(&cls);
     messageWindow=CreateWindowExW(WS_EX_TOOLWINDOW,cls.lpszClassName,L"AeroSpace",WS_OVERLAPPED,0,0,0,0,NULL,NULL,cls.hInstance,NULL);
     if (!messageWindow) { InterlockedExchange(&ready,-1);return; }
+    taskbarWindow=CreateWindowExW(WS_EX_APPWINDOW|WS_EX_NOACTIVATE,cls.lpszClassName,
+        L"AeroSpace",WS_OVERLAPPEDWINDOW,-32000,-32000,200,100,NULL,NULL,cls.hInstance,NULL);
+    if (taskbarWindow) ShowWindow(taskbarWindow,SW_SHOWMINNOACTIVE);
     memset(&tray,0,sizeof(tray));tray.cbSize=sizeof(tray);tray.hWnd=messageWindow;tray.uID=1;
     tray.uFlags=NIF_ICON|NIF_MESSAGE|NIF_TIP;tray.uCallbackMessage=WM_AW_TRAY;tray.hIcon=LoadIconW(NULL,IDI_APPLICATION);
     wcscpy_s(tray.szTip,128,L"AeroSpace");addTray();
@@ -480,6 +555,8 @@ void aw_run_loop(AWEventCallback callback) {
 cleanup:
     for(int i=0;i<5;i++) if(hooks[i]) UnhookWinEvent(hooks[i]);
     Shell_NotifyIconW(NIM_DELETE,&tray);messageWindow=NULL;
+    if (taskbarWindow) { DestroyWindow(taskbarWindow);taskbarWindow=NULL; }
+    if (workspaceIcon) { DestroyIcon(workspaceIcon);workspaceIcon=NULL; }
 }
 int32_t aw_loop_ready(void) { return ready; }
 void aw_stop_loop(void) { InterlockedExchange(&stopping,1);if(messageWindow)PostMessageW(messageWindow,WM_CLOSE,0,0); }
@@ -495,7 +572,14 @@ void aw_shutdown(void) {
 }
 int32_t aw_register_hotkey(int32_t id,uint32_t modifiers,uint32_t key) { HotkeyRequest r={id,modifiers,key};return messageWindow && SendMessageW(messageWindow,WM_AW_REGISTER,0,(LPARAM)&r); }
 void aw_unregister_hotkey(int32_t id) { if(messageWindow)SendMessageW(messageWindow,WM_AW_UNREGISTER,id,0); }
-void aw_tray_text(const char *text,int32_t enabled) { wchar_t *value=wide(text);if(value && messageWindow)SendMessageW(messageWindow,WM_AW_TEXT,enabled,(LPARAM)value);free(value); }
+void aw_tray_text(const char *text,const char *workspace,int32_t enabled) {
+    wchar_t *tooltip=wide(text),*name=wide(workspace);
+    if (tooltip && name && messageWindow) {
+        TrayTextRequest request={tooltip,name};
+        SendMessageW(messageWindow,WM_AW_TEXT,enabled,(LPARAM)&request);
+    }
+    free(tooltip);free(name);
+}
 void aw_message(const char *title,const char *text) { wchar_t *a=wide(title),*b=wide(text);if(a && b)MessageBoxW(NULL,b,a,MB_OK|MB_ICONERROR);free(a);free(b); }
 int32_t aw_watchdog(uint32_t parent) {
     if (!parent || parent == GetCurrentProcessId()) return 1;
