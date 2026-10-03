@@ -6,6 +6,7 @@
 # Top level dirs
 !/.github
 !/Sources
+!/Resources
 !/dev-docs
 !/docs
 !/legal

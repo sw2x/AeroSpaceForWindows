@@ -23,6 +23,8 @@ The app and CLI have different filenames because Windows filenames are case-inse
 
 The AeroSpace taskbar button and system tray icon show the first one or two characters of the focused workspace name, such as `B`, `C`, `N`, or `1`. The button title and tray tooltip show the full name. Both icons show a dash when AeroSpace is disabled. To show text labels on taskbar buttons, set Windows' taskbar button combining option to Never.
 
+Pin `AeroSpaceApp.exe` to the taskbar to launch the app. Pinned shortcuts use the blue `A` application icon. While the app runs, the current workspace appears as a small badge at the lower right of the taskbar icon, including on pinned buttons. This badge shows a dash when AeroSpace is disabled. Windows' small taskbar icon mode does not support these badges; use normal-sized icons or the system tray indicator instead. If a shortcut was pinned with an older build and has a blank icon, unpin it and pin the updated app again.
+
 AeroSpace workspaces are independent of Windows virtual desktops. Switching workspaces hides the windows on the previous workspace and shows the windows on the destination workspace. Each monitor has its own active workspace. Disabling or quitting AeroSpace restores the windows it has hidden. A separate watchdog process also restores them if the app exits unexpectedly. Recovery information is stored in `%LOCALAPPDATA%\AeroSpace`.
 
 ## Configuration

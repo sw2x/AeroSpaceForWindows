@@ -9,6 +9,8 @@
 
 The repository's `.swift-version` and `Package.swift` define the Swift version. `script/Invoke-Swift.ps1` resolves `swift.exe`, supplies the compiler and SDK environment, and normalizes environment key casing. SwiftPM uses the native build engine explicitly.
 
+The wrapper also uses the Windows SDK's `rc.exe` to compile `Resources/Windows/AeroSpace.rc` into `.build/resources/AeroSpace.res`, which is linked into the app and CLI. Use the wrapper when building directly with SwiftPM; plain `swift build` requires this resource to have been compiled first. Run `script/New-AppIcon.ps1` to regenerate the checked-in multi-resolution icon.
+
 ## Build
 
 ```powershell

@@ -1,0 +1,2 @@
+// Keep this ID in sync with APP_ICON_RESOURCE in NativeWindows.c.
+1 ICON "AeroSpace.ico"

@@ -36,6 +36,46 @@ if (Test-Path $vswhere) {
 $info.Environment['Path'] = (Split-Path $swiftExecutable) + ';' + $info.Environment['Path']
 $info.Environment['CLANG_MODULE_CACHE_PATH'] = Join-Path $repoRoot '.build\clang-cache'
 $info.Environment['SWIFTPM_MODULECACHE_OVERRIDE'] = Join-Path $repoRoot '.build\module-cache'
+$iconDirectory = Join-Path $repoRoot 'Resources\Windows'
+$iconResource = Join-Path $repoRoot '.build\resources\AeroSpace.res'
+$info.Environment['AEROSPACE_ICON_RESOURCE'] = $iconResource
+if ($SwiftArguments[0] -in @('build', 'test', 'run')) {
+    $iconInputs = @((Join-Path $iconDirectory 'AeroSpace.rc'), (Join-Path $iconDirectory 'AeroSpace.ico'))
+    $needsIconResource = !(Test-Path -LiteralPath $iconResource)
+    if (!$needsIconResource) {
+        $resourceTime = (Get-Item -LiteralPath $iconResource).LastWriteTimeUtc
+        $needsIconResource = @($iconInputs | Where-Object { (Get-Item -LiteralPath $_).LastWriteTimeUtc -gt $resourceTime }).Count -gt 0
+    }
+    if ($needsIconResource) {
+        $resourceCompiler = $info.Environment['Path'].Split(';') |
+            Where-Object { $_ } | ForEach-Object { Join-Path $_ 'rc.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        if (!$resourceCompiler) {
+            # Some Visual Studio installations omit the SDK bin directory from PATH.
+            $sdkBinRoots = @((Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'))
+            if ($info.Environment['WindowsSdkDir']) { $sdkBinRoots = @((Join-Path $info.Environment['WindowsSdkDir'] 'bin')) + $sdkBinRoots }
+            $resourceCompiler = $sdkBinRoots | Select-Object -Unique |
+                ForEach-Object { Get-ChildItem -LiteralPath $_ -Directory -ErrorAction SilentlyContinue } |
+                Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+                Sort-Object { [version]$_.Name } -Descending |
+                ForEach-Object { Join-Path $_.FullName 'x64\rc.exe' } |
+                Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        }
+        if (!$resourceCompiler) { throw 'Windows SDK resource compiler rc.exe was not found in the Visual Studio environment.' }
+        New-Item -ItemType Directory -Path (Split-Path $iconResource) -Force | Out-Null
+        $resourceInfo = [Diagnostics.ProcessStartInfo]::new()
+        $resourceInfo.FileName = $resourceCompiler
+        $resourceInfo.WorkingDirectory = $iconDirectory
+        $resourceInfo.UseShellExecute = $false
+        $resourceInfo.CreateNoWindow = $true
+        $resourceInfo.Environment.Clear()
+        foreach ($entry in $info.Environment.GetEnumerator()) { $resourceInfo.Environment[$entry.Key] = $entry.Value }
+        foreach ($argument in @('/nologo', '/fo', $iconResource, $iconInputs[0])) { $resourceInfo.ArgumentList.Add($argument) }
+        $resourceProcess = [Diagnostics.Process]::Start($resourceInfo)
+        $resourceProcess.WaitForExit()
+        if ($resourceProcess.ExitCode -ne 0) { throw "Windows icon compilation failed: $($resourceProcess.ExitCode)" }
+    }
+}
 # Derive the installed SDK without relying on installer changes reaching this process.
 # An explicit existing SDKROOT takes precedence; administrative extraction is supported too.
 $toolBin = Split-Path $swiftExecutable

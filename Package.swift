@@ -1,5 +1,11 @@
 // swift-tools-version: 6.4
 import PackageDescription
+import Foundation
+
+// Invoke-Swift.ps1 compiles the Windows icon before SwiftPM links executables.
+let windowsIconResource = ProcessInfo.processInfo.environment["AEROSPACE_ICON_RESOURCE"]
+    ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent(".build/resources/AeroSpace.res").path
+let windowsIconLinkerSettings: [LinkerSetting] = [.unsafeFlags(["-Xlinker", windowsIconResource])]
 
 let package = Package(
     name: "AeroSpaceForWindows",
@@ -23,8 +29,8 @@ let package = Package(
             .product(name: "TOMLDecoder", package: "TOMLDecoder"),
         ], resources: [.copy("Resources/default-config.toml")]),
         .executableTarget(name: "AeroSpaceApp", dependencies: ["AppBundle", "Common", "NativeWindows"],
-            linkerSettings: [.unsafeFlags(["-Xlinker", "/SUBSYSTEM:WINDOWS", "-Xlinker", "/ENTRY:mainCRTStartup"])]),
-        .executableTarget(name: "Cli", dependencies: ["Common", "NativeWindows"]),
+            linkerSettings: windowsIconLinkerSettings + [.unsafeFlags(["-Xlinker", "/SUBSYSTEM:WINDOWS", "-Xlinker", "/ENTRY:mainCRTStartup"])]),
+        .executableTarget(name: "Cli", dependencies: ["Common", "NativeWindows"], linkerSettings: windowsIconLinkerSettings),
         .testTarget(name: "AppBundleTests", dependencies: ["AppBundle"], path: "Sources/AppBundleTests"),
         .executableTarget(name: "WindowsSmoke", dependencies: ["NativeWindows"], path: "Tests/WindowsSmoke", linkerSettings: [.linkedLibrary("swiftCore")]),
     ],

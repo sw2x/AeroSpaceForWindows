@@ -5,6 +5,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shobjidl.h>
+#include <propkey.h>
 #include <sddl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +19,8 @@
 #define WM_AW_UNREGISTER (WM_APP + 3)
 #define WM_AW_TEXT (WM_APP + 4)
 #define HIDDEN_PROPERTY L"AeroSpace.Windows.HiddenOwner"
+#define APP_ICON_RESOURCE 1
+#define APP_USER_MODEL_ID L"AeroSpaceForWindows.AeroSpace"
 typedef struct { uint64_t hwnd, creation; uint32_t pid, owner; } HiddenEntry;
 typedef struct { int id; UINT modifiers, key; } HotkeyRequest;
 typedef struct { const wchar_t *tooltip, *workspace; } TrayTextRequest;
@@ -38,6 +41,12 @@ static AWEventCallback eventCallback;
 static NOTIFYICONDATAW tray;
 static int trayEnabled = 1;
 static HICON workspaceIcon;
+static ITaskbarList3 *taskbarList;
+static int taskbarButtonReady;
+static HICON workspaceOverlay;
+static wchar_t workspaceOverlayLabel[3];
+static int workspaceOverlayEnabled = -1;
+static int workspaceOverlayDirty;
 static const CLSID desktopManagerClass = {0xaa509086,0x5ca9,0x4c25,{0x8f,0x95,0x58,0x9d,0x3c,0x07,0xb4,0x8a}};
 static const IID desktopManagerInterface = {0xa5cd92ff,0x29be,0x454c,{0x8d,0x04,0xd8,0x28,0x79,0xfb,0x3f,0x1b}};
 static SECURITY_ATTRIBUTES *userSecurity(SECURITY_ATTRIBUTES *attributes);
@@ -435,8 +444,7 @@ static void CALLBACK windowEvent(HWINEVENTHOOK hook,DWORD event,HWND hwnd,LONG o
     emit(type,(uint64_t)(uintptr_t)hwnd);
 }
 static void addTray(void) { Shell_NotifyIconW(NIM_ADD,&tray); tray.uVersion=NOTIFYICON_VERSION_4; Shell_NotifyIconW(NIM_SETVERSION,&tray); }
-static HICON makeWorkspaceIcon(const wchar_t *name, int enabled) {
-    const int size = 32;
+static HICON makeWorkspaceIcon(const wchar_t *name, int enabled, int size) {
     HDC screen = GetDC(NULL);
     if (!screen) return NULL;
     HDC dc = CreateCompatibleDC(screen);
@@ -463,7 +471,7 @@ static HICON makeWorkspaceIcon(const wchar_t *name, int enabled) {
     } else {
         label[0] = enabled ? L'?' : L'\x2014';
     }
-    HFONT font = CreateFontW(label[1] ? -21 : -27,0,0,0,FW_BOLD,FALSE,FALSE,FALSE,
+    HFONT font = CreateFontW(-(label[1] ? size * 21 / 32 : size * 27 / 32),0,0,0,FW_BOLD,FALSE,FALSE,FALSE,
                              DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,
                              ANTIALIASED_QUALITY,DEFAULT_PITCH,L"Segoe UI");
     HGDIOBJ previousFont = font ? SelectObject(dc,font) : NULL;
@@ -483,11 +491,69 @@ static HICON makeWorkspaceIcon(const wchar_t *name, int enabled) {
     DeleteObject(color);
     return icon;
 }
+static void applyWorkspaceOverlay(void) {
+    // Explorer copies the icon. Retain ours to replay it when the taskbar is re-created.
+    if (taskbarList && taskbarButtonReady && taskbarWindow && workspaceOverlay)
+        workspaceOverlayDirty=FAILED(ITaskbarList3_SetOverlayIcon(taskbarList,taskbarWindow,workspaceOverlay,tray.szTip));
+}
+static int updateWorkspaceOverlay(const wchar_t *name, int enabled) {
+    if (workspaceOverlay && workspaceOverlayEnabled == enabled &&
+        (!enabled || !wcsncmp(workspaceOverlayLabel,name,2))) return 0;
+    HICON icon = makeWorkspaceIcon(name,enabled,16);
+    if (!icon) return 0;
+    if (workspaceOverlay) DestroyIcon(workspaceOverlay);
+    workspaceOverlay=icon;
+    workspaceOverlayEnabled=enabled;
+    workspaceOverlayDirty=1;
+    wcsncpy_s(workspaceOverlayLabel,3,name,2);
+    return 1;
+}
+static void setTaskbarTextProperty(IPropertyStore *store, const PROPERTYKEY *key, const wchar_t *text) {
+    PROPVARIANT value = {0};
+    value.vt = VT_LPWSTR;
+    value.pwszVal = (wchar_t *)text;
+    // SetValue copies the string; these values are borrowed only for this call.
+    IPropertyStore_SetValue(store,key,&value);
+}
+static void configureTaskbarPin(HWND hwnd) {
+    wchar_t executable[32768], icon[32780], command[32768];
+    DWORD length = GetModuleFileNameW(NULL,executable,32768);
+    if (!length || length >= 32768) return;
+    // Make the relaunch executable absolute while retaining --config-path and other arguments.
+    const wchar_t *arguments = GetCommandLineW();
+    if (*arguments == L'"') {
+        arguments++;
+        while (*arguments && *arguments != L'"') arguments++;
+        if (*arguments) arguments++;
+    } else {
+        while (*arguments && *arguments != L' ' && *arguments != L'\t') arguments++;
+    }
+    if (swprintf_s(command,32768,L"\"%ls\"%ls",executable,arguments) < 0) return;
+    swprintf_s(icon,32780,L"%ls,-%d",executable,APP_ICON_RESOURCE);
+    HRESULT initialized = CoInitializeEx(NULL,COINIT_APARTMENTTHREADED);
+    IPropertyStore *store = NULL;
+    if (SUCCEEDED(SHGetPropertyStoreForWindow(hwnd,&IID_IPropertyStore,(void **)&store))) {
+        static const PROPERTYKEY relaunchCommand = INIT_PKEY_AppUserModel_RelaunchCommand;
+        static const PROPERTYKEY relaunchIcon = INIT_PKEY_AppUserModel_RelaunchIconResource;
+        static const PROPERTYKEY relaunchName = INIT_PKEY_AppUserModel_RelaunchDisplayNameResource;
+        static const PROPERTYKEY appID = INIT_PKEY_AppUserModel_ID;
+        // Set relaunch properties before the ID so the shell sees a complete pin target.
+        setTaskbarTextProperty(store,&relaunchCommand,command);
+        setTaskbarTextProperty(store,&relaunchIcon,icon);
+        setTaskbarTextProperty(store,&relaunchName,L"AeroSpace");
+        setTaskbarTextProperty(store,&appID,APP_USER_MODEL_ID);
+        IPropertyStore_Release(store);
+    }
+    if (SUCCEEDED(initialized)) CoUninitialize();
+}
 static LRESULT CALLBACK windowProcedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
-    static UINT taskbarCreated;
+    static UINT taskbarCreated, taskbarButtonCreated;
     if (!taskbarCreated) taskbarCreated=RegisterWindowMessageW(L"TaskbarCreated");
+    if (!taskbarButtonCreated) taskbarButtonCreated=RegisterWindowMessageW(L"TaskbarButtonCreated");
     if (msg==taskbarCreated && hwnd==messageWindow) { addTray(); return 0; }
     if (hwnd == taskbarWindow) {
+        if (msg==taskbarCreated) { taskbarButtonReady=0;workspaceOverlayDirty=1;return 0; }
+        if (msg==taskbarButtonCreated) { taskbarButtonReady=1;applyWorkspaceOverlay();return 0; }
         if (msg == WM_SYSCOMMAND && (wp & 0xfff0) == SC_RESTORE) return 0;
         if (msg == WM_CLOSE) { emit(7,0); return 0; }
     }
@@ -499,8 +565,9 @@ static LRESULT CALLBACK windowProcedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) 
         case WM_AW_TEXT: {
             const TrayTextRequest *request = (const TrayTextRequest*)lp;
             trayEnabled=(int)wp;
+            int descriptionChanged=wcscmp(tray.szTip,request->tooltip)!=0;
             wcsncpy_s(tray.szTip,128,request->tooltip,_TRUNCATE);
-            HICON icon = makeWorkspaceIcon(request->workspace,trayEnabled);
+            HICON icon = makeWorkspaceIcon(request->workspace,trayEnabled,32);
             if (icon) {
                 HICON previous = workspaceIcon;
                 tray.hIcon = workspaceIcon = icon;
@@ -515,6 +582,8 @@ static LRESULT CALLBACK windowProcedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) 
                 if (taskbarWindow) SetWindowTextW(taskbarWindow,request->tooltip);
                 Shell_NotifyIconW(NIM_MODIFY,&tray);
             }
+            int overlayChanged=updateWorkspaceOverlay(request->workspace,trayEnabled);
+            if (overlayChanged || descriptionChanged || workspaceOverlayDirty) applyWorkspaceOverlay();
             return 0;
         }
         case WM_AW_TRAY:
@@ -535,15 +604,32 @@ static LRESULT CALLBACK windowProcedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) 
 }
 void aw_run_loop(AWEventCallback callback) {
     eventCallback=callback;
+    SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID);
     WNDCLASSW cls={0};cls.lpfnWndProc=windowProcedure;cls.hInstance=GetModuleHandleW(NULL);cls.lpszClassName=L"AeroSpace.Windows.Message";
+    cls.hIcon=LoadIconW(cls.hInstance,MAKEINTRESOURCEW(APP_ICON_RESOURCE));
+    if (!cls.hIcon) cls.hIcon=LoadIconW(NULL,MAKEINTRESOURCEW(32512));
     RegisterClassW(&cls);
     messageWindow=CreateWindowExW(WS_EX_TOOLWINDOW,cls.lpszClassName,L"AeroSpace",WS_OVERLAPPED,0,0,0,0,NULL,NULL,cls.hInstance,NULL);
     if (!messageWindow) { InterlockedExchange(&ready,-1);return; }
+    // Taskbar COM calls and release stay on the window's message-loop thread.
+    HRESULT taskbarCOMInitialization=CoInitializeEx(NULL,COINIT_APARTMENTTHREADED);
+    taskbarButtonReady=0;
+    if (SUCCEEDED(taskbarCOMInitialization) || taskbarCOMInitialization==RPC_E_CHANGED_MODE) {
+        if (SUCCEEDED(CoCreateInstance(&CLSID_TaskbarList,NULL,CLSCTX_INPROC_SERVER,
+            &IID_ITaskbarList3,(void **)&taskbarList)) && FAILED(ITaskbarList3_HrInit(taskbarList))) {
+            ITaskbarList3_Release(taskbarList);taskbarList=NULL;
+        }
+    }
     taskbarWindow=CreateWindowExW(WS_EX_APPWINDOW|WS_EX_NOACTIVATE,cls.lpszClassName,
         L"AeroSpace",WS_OVERLAPPEDWINDOW,-32000,-32000,200,100,NULL,NULL,cls.hInstance,NULL);
-    if (taskbarWindow) ShowWindow(taskbarWindow,SW_SHOWMINNOACTIVE);
+    if (taskbarWindow) {
+        // Explorer's readiness notification must also reach an elevated app.
+        UINT buttonCreated=RegisterWindowMessageW(L"TaskbarButtonCreated");
+        if (buttonCreated) ChangeWindowMessageFilterEx(taskbarWindow,buttonCreated,MSGFLT_ALLOW,NULL);
+        configureTaskbarPin(taskbarWindow);ShowWindow(taskbarWindow,SW_SHOWMINNOACTIVE);
+    }
     memset(&tray,0,sizeof(tray));tray.cbSize=sizeof(tray);tray.hWnd=messageWindow;tray.uID=1;
-    tray.uFlags=NIF_ICON|NIF_MESSAGE|NIF_TIP;tray.uCallbackMessage=WM_AW_TRAY;tray.hIcon=LoadIconW(NULL,IDI_APPLICATION);
+    tray.uFlags=NIF_ICON|NIF_MESSAGE|NIF_TIP;tray.uCallbackMessage=WM_AW_TRAY;tray.hIcon=cls.hIcon;
     wcscpy_s(tray.szTip,128,L"AeroSpace");addTray();
     HWINEVENTHOOK hooks[5];
     hooks[0]=SetWinEventHook(EVENT_SYSTEM_FOREGROUND,EVENT_SYSTEM_FOREGROUND,NULL,windowEvent,0,0,WINEVENT_OUTOFCONTEXT|WINEVENT_SKIPOWNPROCESS);
@@ -558,8 +644,15 @@ void aw_run_loop(AWEventCallback callback) {
 cleanup:
     for(int i=0;i<5;i++) if(hooks[i]) UnhookWinEvent(hooks[i]);
     Shell_NotifyIconW(NIM_DELETE,&tray);messageWindow=NULL;
-    if (taskbarWindow) { DestroyWindow(taskbarWindow);taskbarWindow=NULL; }
+    if (taskbarWindow) {
+        if (taskbarList && taskbarButtonReady) ITaskbarList3_SetOverlayIcon(taskbarList,taskbarWindow,NULL,NULL);
+        DestroyWindow(taskbarWindow);taskbarWindow=NULL;
+    }
     if (workspaceIcon) { DestroyIcon(workspaceIcon);workspaceIcon=NULL; }
+    if (workspaceOverlay) { DestroyIcon(workspaceOverlay);workspaceOverlay=NULL; }
+    workspaceOverlayEnabled=-1;workspaceOverlayLabel[0]=0;workspaceOverlayDirty=0;taskbarButtonReady=0;
+    if (taskbarList) { ITaskbarList3_Release(taskbarList);taskbarList=NULL; }
+    if (SUCCEEDED(taskbarCOMInitialization)) CoUninitialize();
 }
 int32_t aw_loop_ready(void) { return ready; }
 void aw_stop_loop(void) { InterlockedExchange(&stopping,1);if(messageWindow)PostMessageW(messageWindow,WM_CLOSE,0,0); }
